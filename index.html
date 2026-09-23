@@ -1663,7 +1663,7 @@
         card.addEventListener("dragend", function(){ card.classList.remove("dragging"); });
         card.addEventListener("click", function(){ openTaskDetail(t.id); });
         card.appendChild(el("div", {class:"t-title"}, [t.title]));
-        card.appendChild(el("div", {style:"font-size:11px;color:var(--text-dim);"}, [fmtDate(t.createdAt)]));
+        card.appendChild(el("div", {style:"font-size:11px;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))]));
         var recurrenceText = recurrenceLabel(t);
         if(recurrenceText) card.appendChild(el("div", {class:"task-recurrence"}, [recurrenceText]));
         trashList.appendChild(card);
