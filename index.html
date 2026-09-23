@@ -728,7 +728,7 @@
     var dates = [];
     var cur = new Date(start);
     var guard = 0;
-    while((!targetEnd || cur.getTime() <= targetEnd.getTime()) && guard < (hasRangeEnd ? 10000 : 365)){
+    while((!targetEnd || cur.getTime() <= targetEnd.getTime()) && (hasRangeEnd || guard < 365)){
       dates.push(new Date(cur));
       guard++;
       if(task.recurrenceRule === "daily") cur.setDate(cur.getDate()+1);
