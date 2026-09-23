@@ -268,99 +268,112 @@
 </style>
 <style id="modern-theme">
   :root{
-    --pink:#d81b60;
-    --pink-dark:#ad1457;
-    --pink-soft:#fff1f6;
-    --bg:#f6f7f9;
+    --pink:#c62f63;
+    --pink-dark:#a51e50;
+    --pink-soft:#fcf1f5;
+    --bg:#f5f7fb;
     --card:#ffffff;
-    --border:#e5e7eb;
-    --border-strong:#d1d5db;
-    --text:#172033;
-    --text-dim:#667085;
-    --muted:#98a2b3;
-    --shadow:0 8px 24px rgba(16,24,40,.06);
-    --shadow-sm:0 1px 3px rgba(16,24,40,.08);
+    --border:#e4e9f0;
+    --border-strong:#cbd4e0;
+    --text:#182337;
+    --text-dim:#617087;
+    --muted:#8b98aa;
+    --shadow:0 12px 32px rgba(20,36,61,.06);
+    --shadow-sm:0 2px 8px rgba(20,36,61,.05);
   }
   *,*::before,*::after{box-sizing:border-box;}
   html{background:var(--bg);}
   body{min-width:320px;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif!important;line-height:1.45;-webkit-font-smoothing:antialiased;}
   button,input,textarea,select{font:inherit;}
-  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(216,27,96,.18);outline-offset:1px;}
-  header.topbar{height:56px;padding:0 28px;background:#fff;color:var(--text);border-bottom:1px solid var(--border);box-shadow:none;}
-  header.topbar h1{font-size:17px;font-weight:750;letter-spacing:-.01em;}
-  .app-body{min-height:calc(100vh - 56px);}
-  .sidebar{width:88px;flex:0 0 88px;min-height:calc(100vh - 56px);padding:18px 10px;background:#fff;border-right:1px solid var(--border);gap:8px;}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[role="button"]:focus-visible{outline:3px solid rgba(198,47,99,.22);outline-offset:2px;}
+  header.topbar{height:68px;padding:0 clamp(18px,2.4vw,36px);background:#fff;color:var(--text);border-bottom:1px solid var(--border);box-shadow:none;gap:12px;}
+  header.topbar h1{font-size:16px;font-weight:750;letter-spacing:-.025em;line-height:1.25;}
+  .brand-mark{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:var(--pink);color:#fff;font-size:19px;font-weight:800;box-shadow:0 4px 12px rgba(198,47,99,.18);}
+  .brand-copy{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .brand-copy span{font-size:11px;color:var(--muted);font-weight:550;}
+  .storage-note{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--border);border-radius:999px;background:#fbfcfe;color:var(--text-dim);font-size:11px;font-weight:600;white-space:nowrap;}
+  .storage-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#2ab575;}
+  .app-body{min-height:calc(100vh - 68px);}
+  .sidebar{width:88px;flex:0 0 88px;min-height:calc(100vh - 68px);padding:20px 10px;background:#fff;border-right:1px solid var(--border);gap:8px;}
   .side-item{width:100%;padding:11px 5px 10px;border-radius:10px;color:var(--text-dim);gap:6px;transition:background .15s,color .15s;}
   .side-item svg{width:20px;height:20px;}
   .side-item span{font-size:11px;font-weight:650;}
   .side-item:hover{background:#f9fafb;color:var(--text);}
-  .side-item.active{background:var(--pink-soft);color:var(--pink-dark);}
-  main{padding:24px clamp(16px,3vw,36px);}
+  .side-item.active{background:var(--pink-soft);color:var(--pink-dark);box-shadow:inset 3px 0 0 var(--pink);}
+  main{padding:28px clamp(16px,2.6vw,40px);}
+  .view-heading{display:flex;align-items:flex-end;justify-content:space-between;margin:0 0 18px;}
+  .view-heading h2{margin:0;color:var(--text);font-size:23px;font-weight:760;letter-spacing:-.035em;line-height:1.2;}
+  .view-heading p{margin:6px 0 0;color:var(--text-dim);font-size:12.5px;line-height:1.5;}
 
-  .toolbar{min-height:58px;margin-bottom:20px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);gap:10px;}
-  .toolbar>.period-quick-button{padding:7px 11px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--text-dim);font-size:12px;font-weight:650;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;}
-  .toolbar>.period-quick-button:hover{background:#f2f4f7;color:var(--text);}
-  .toolbar>.period-quick-button.active{background:var(--pink);color:#fff;box-shadow:0 1px 2px rgba(216,27,96,.2);}
-  .toolbar>.period-arrow{width:32px;height:32px;padding:0;border:1px solid var(--border-strong);border-radius:7px;background:#fff;color:#344054;font-size:19px;font-weight:400;line-height:1;cursor:pointer;}
-  .toolbar>.period-arrow:hover{background:#f9fafb;border-color:#98a2b3;}
-  .period-range{display:flex;align-items:center;gap:6px;padding-left:2px;flex:0 0 auto;white-space:nowrap;}
+  .toolbar{min-height:64px;margin-bottom:20px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);gap:8px;}
+  .toolbar>.period-quick-button{min-height:36px;padding:8px 12px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-dim);font-size:12px;font-weight:650;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;}
+  .toolbar>.period-quick-button:hover{background:#f2f5f9;color:var(--text);}
+  .toolbar>.period-quick-button.active{background:var(--pink-soft);border-color:#f5dce6;color:var(--pink-dark);box-shadow:none;}
+  .toolbar>.period-arrow{width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:9px;background:#fff;color:#344054;font-size:19px;font-weight:400;line-height:1;cursor:pointer;}
+  .toolbar>.period-arrow:hover{background:#f6f8fb;border-color:var(--border-strong);}
+  .period-range{display:flex;align-items:center;gap:8px;padding:5px 8px;flex:0 0 auto;white-space:nowrap;border:1px solid var(--border);border-radius:10px;background:#f8fafc;}
   .period-range span{color:var(--text-dim);font-size:11px;font-weight:650;}
-  .period-range input{width:125px;height:32px;padding:5px 7px;border:1px solid var(--border-strong);border-radius:7px;background:#fff;color:var(--text);font-size:11px;}
-  .period-range input:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px rgba(216,27,96,.1);}
+  .period-range input{width:125px;height:30px;padding:4px 7px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);font-size:11px;}
+  .period-range input:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px rgba(198,47,99,.12);}
   .spacer{flex:1 1 auto;min-width:12px;}
-  .btn{min-height:36px;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;transition:background .15s,border-color .15s,box-shadow .15s;}
-  .btn-primary{background:var(--pink);color:#fff;box-shadow:0 1px 2px rgba(216,27,96,.18);}
+  .btn{min-height:38px;padding:9px 15px;border-radius:9px;font-size:12.5px;font-weight:700;transition:background .15s,border-color .15s,box-shadow .15s;}
+  .btn-primary{background:var(--pink);color:#fff;box-shadow:0 2px 5px rgba(198,47,99,.14);}
   .btn-primary:hover{background:var(--pink-dark);}
   .btn-outline{background:#fff;border:1px solid var(--border-strong);color:#344054;}
   .btn-outline:hover{background:#f9fafb;border-color:#98a2b3;}
   .btn-danger{background:#fff;border:1px solid #f2b8c8;color:#c01048;}
   .btn-danger:hover{background:#fff5f7;}
 
-  .board{display:grid;grid-template-columns:repeat(6,minmax(230px,1fr));gap:16px;align-items:stretch;overflow-x:auto;padding:2px 2px 12px;}
-  .column,.trash-column{min-width:230px;max-width:none;height:calc(100vh - 180px);min-height:320px;border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm);}
+  .board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;align-items:stretch;overflow:visible;padding:1px 1px 8px;}
+  .column,.trash-column{min-width:0;max-width:none;height:clamp(420px,calc(100dvh - 250px),760px);min-height:320px;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);}
   .column{background:var(--card);border:1px solid var(--border);border-top:3px solid #98a2b3;}
   .column-head{min-height:52px;padding:13px 14px;border-bottom:1px solid var(--border);}
-  .column-head h3{font-size:13px;font-weight:750;letter-spacing:-.01em;}
-  .count-badge{min-width:22px;height:22px;border-radius:999px;font-size:11px;}
+  .column-head h3{font-size:12.5px;font-weight:760;letter-spacing:-.015em;}
+  .count-badge{min-width:23px;height:23px;border-radius:999px;font-size:10.5px;}
   .column-search{width:calc(100% - 28px);margin:10px 14px 6px;padding:7px 2px;border-bottom:1px solid var(--border-strong);font-size:12px;}
   .column-search:focus,.column-search:focus-visible{outline:none!important;box-shadow:none!important;border-top:0;border-left:0;border-right:0;border-bottom-color:var(--search-color,var(--pink));}
   .column-search::placeholder{color:var(--muted);}
-  .card-list{padding:10px 12px;min-height:70px;overflow-y:auto;overflow-x:hidden;}
+  .card-list{padding:10px 11px;min-height:70px;overflow-y:auto;overflow-x:hidden;background:#fbfcff;}
+  .column .card-list:empty::after{content:"Chưa có công việc";display:block;padding:30px 8px;color:var(--muted);font-size:11.5px;text-align:center;}
   .card-list.drag-over{background:#fff4f7;outline:2px dashed var(--pink);outline-offset:-6px;}
-  .task-card{margin-bottom:9px;padding:12px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:border-color .15s,box-shadow .15s,transform .15s;}
-  .task-card:hover{border-color:#f0a4bd;box-shadow:0 5px 14px rgba(16,24,40,.08);transform:translateY(-1px);}
-  .task-card .t-title{margin-bottom:9px;font-size:13px;font-weight:650;line-height:1.45;}
+  .task-card{margin-bottom:9px;padding:12px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(20,36,61,.025);transition:border-color .15s,box-shadow .15s,transform .15s;}
+  .task-card:hover{border-color:#d7bdcb;box-shadow:0 4px 12px rgba(20,36,61,.07);transform:translateY(-1px);}
+  .task-card .t-title{margin-bottom:9px;font-size:12.5px;font-weight:670;line-height:1.45;}
   .task-card .t-meta{font-size:11px;color:var(--text-dim);}
   .progress-track{height:5px;background:#f2f4f7;}
   .task-card .t-meta{justify-content:flex-end;min-height:34px;}
-  .task-recurrence{margin-top:5px;color:var(--pink-dark);font-size:10.5px;font-weight:650;line-height:1.3;}
+  .task-recurrence{margin-top:5px;color:var(--pink-dark);font-size:10.5px;font-weight:650;line-height:1.35;}
   .progress-circle{--progress:0%;--progress-color:var(--pink);position:relative;display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:conic-gradient(var(--progress-color) var(--progress),#edf0f4 0);}
   .progress-circle::before{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff;}
   .progress-circle .progress-pct{position:relative;z-index:1;font-size:9px;font-weight:800;line-height:1;}
   .quick-add{padding:8px 12px 12px;}
   .quick-add input{padding:9px 10px;border:1px dashed var(--border-strong);border-radius:8px;background:#fafbfc;font-size:12px;}
   .quick-add input:focus{border-color:var(--pink);background:#fff;}
-  .trash-column{background:#fcfcfd;border:1px dashed #e0a9bc;}
-  .trash-column .column-head{background:#fff5f8!important;}
+  .trash-column{background:#fff;border:1px dashed #e2c5d0;}
+  .trash-column .column-head{background:#fff8fa!important;}
   .trash-column .card-list.drag-over{background:#fff0f4;outline-color:#d6336c;}
   .trash-empty-hint{padding:22px 12px;font-size:12px;color:var(--muted);}
   .trash-clear{margin:8px 12px 12px;}
 
-  .modal-overlay{padding:16px;background:rgba(16,24,40,.48);backdrop-filter:blur(2px);}
-  .modal{max-width:640px;max-height:min(88vh,760px);border:1px solid rgba(255,255,255,.7);border-radius:14px;box-shadow:0 24px 70px rgba(16,24,40,.24);}
+  .modal-overlay{padding:16px;background:rgba(16,24,40,.46);backdrop-filter:blur(3px);}
+  .modal{max-width:640px;max-height:min(90dvh,800px);border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 28px 72px rgba(16,24,40,.22);}
   .modal-lg{max-width:720px;}
-  .modal-detail{max-width:840px;}
+  .modal-detail{max-width:900px;display:flex;flex-direction:column;overflow:hidden;}
+  .modal-detail .modal-body{flex:1;min-height:0;overflow:auto;}
+  .modal-detail .modal-footer{flex:0 0 auto;}
   .summary-list-modal{height:min(620px,88vh);}
-  .modal-header{padding:16px 20px;background:#fff;border-bottom:1px solid var(--border);}
-  .modal-header h2{font-size:16px;font-weight:750;}
-  .modal-body{padding:20px;}
-  .modal-footer{padding:13px 20px;background:#fcfcfd;border-top:1px solid var(--border);}
+  .modal-header{padding:17px 22px;background:#fff;border-bottom:1px solid var(--border);}
+  .modal-header h2{font-size:16px;font-weight:750;letter-spacing:-.02em;}
+  .modal-body{padding:22px;}
+  .modal-footer{padding:14px 22px;background:#fafbfd;border-top:1px solid var(--border);}
   .icon-btn{color:#667085;transition:background .15s,color .15s;}
   .icon-btn:hover{background:#f2f4f7;color:var(--pink-dark);}
   .modal-2col{gap:24px;}
   .modal-2col .col-right{border-left-color:var(--border);padding-left:24px;}
   .field{margin-bottom:15px;}
   .field label{margin-bottom:7px;color:#667085;font-size:10.5px;letter-spacing:.07em;}
+  .field-hint{margin:7px 0 0;color:var(--text-dim);font-size:11px;line-height:1.45;}
+  .recurrence-note{margin:7px 0 0;color:var(--pink-dark);font-size:11px;font-weight:650;line-height:1.45;}
   .field input[type=text],.field input[type=date],.field input[type=datetime-local],.field textarea,.field select{padding:9px 10px;border:1px solid var(--border-strong);border-radius:8px;color:var(--text);font-size:13px;}
   .field input[type=text]:focus,.field input[type=date]:focus,.field input[type=datetime-local]:focus,.field textarea:focus,.field select:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(216,27,96,.11);}
   .row2{gap:12px;}
@@ -371,8 +384,8 @@
   .history-item{font-size:12px;}
   .badge{padding:3px 9px;font-size:10.5px;line-height:1.2;}
 
-  .report-summary{gap:16px;margin-bottom:16px;}
-  .report-summary .stat-card{height:120px;padding:18px 20px;border:1px solid var(--border);border-top-width:3px;box-shadow:var(--shadow-sm);}
+  .report-summary{gap:14px;margin-bottom:16px;}
+  .report-summary .stat-card{height:124px;padding:17px 18px;border:1px solid var(--border);border-top-width:3px;box-shadow:var(--shadow-sm);}
   .stat-card{border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);}
   .stat-card .num{font-size:25px;font-weight:800;letter-spacing:-.03em;}
   .stat-card .lbl{font-size:12px;}
@@ -381,7 +394,7 @@
   .report-bottom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;margin-bottom:20px;}
   .report-bottom-panel{height:300px;margin-bottom:0;display:flex;flex-direction:column;overflow:hidden;}
   .report-bottom-panel .report-table-scroll{flex:1;min-height:0;overflow:auto;}
-  .panel{padding:18px 20px;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);}
+  .panel{padding:18px 20px;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);}
   .panel h3{margin-bottom:14px;font-size:14px;font-weight:750;}
   .report-todo-list{padding-right:2px;}
   table{font-size:12.5px;}
@@ -399,18 +412,26 @@
   textarea.textarea-lines{border-color:var(--border-strong);border-radius:8px;}
   .fade-in,.fade-in-simple{animation:none!important;}
 
+  @media (max-width:1550px){
+    .board{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .column,.trash-column{height:390px;}
+  }
   @media (max-width:1100px){
     .toolbar{align-items:flex-start;}
     .toolbar>.period-range{max-width:100%;}
+    .toolbar>.btn-primary{margin-left:auto;}
     .report-top-grid .panel{height:300px;}
+  }
+  @media (max-width:980px){
+    .board{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   @media (max-width:860px){
     .app-body{display:block;min-height:0;}
     .sidebar{width:100%;height:64px;min-height:0;flex-direction:row;justify-content:center;padding:8px 12px;border-right:0;border-bottom:1px solid var(--border);}
     .side-item{width:112px;height:48px;flex-direction:row;justify-content:center;padding:7px 10px;gap:8px;}
     main{padding:18px 16px 28px;}
-    .board{grid-template-columns:repeat(6,minmax(250px,1fr));}
-    .column,.trash-column{height:calc(100vh - 220px);}
+    .board{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .column,.trash-column{height:380px;}
     .report-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
     .report-top-grid{grid-template-columns:1fr;}
     .report-top-grid .report-todo-panel{grid-column:auto;}
@@ -418,20 +439,29 @@
     .report-bottom-grid{grid-template-columns:1fr;}
   }
   @media (max-width:600px){
-    header.topbar{height:52px;padding:0 16px;}
-    header.topbar h1{font-size:16px;}
+    header.topbar{height:60px;padding:0 14px;}
+    header.topbar h1{font-size:14px;}
+    .brand-mark{width:31px;height:31px;flex-basis:31px;font-size:17px;}
+    .brand-copy span,.storage-note{display:none;}
     .sidebar{height:58px;}
-    .side-item{height:44px;width:50%;max-width:150px;}
+    .side-item{height:44px;width:50%;max-width:170px;}
     main{padding:14px 10px 24px;}
-    .toolbar{padding:10px;gap:9px;margin-bottom:14px;}
-    .toolbar>.period-arrow{flex:0 0 32px;}
-    .toolbar>.period-quick-button{flex:0 0 auto;padding:7px 10px;}
-    .period-range{width:100%;padding:7px 0 0;border-top:1px solid #e4e7ec;}
-    .period-range input{flex:1;width:auto;min-width:0;}
+    .view-heading{margin-bottom:13px;}
+    .view-heading h2{font-size:20px;}
+    .view-heading p{font-size:11.5px;}
+    .toolbar{padding:10px;gap:7px;margin-bottom:14px;}
+    .toolbar>.period-arrow{flex:0 0 34px;height:34px;}
+    .toolbar>.period-quick-button{flex:1 1 auto;padding:7px 7px;text-align:center;}
+    .period-range{order:0;width:calc(100% - 82px);padding:4px 6px;gap:4px;}
+    .period-range input{flex:1;width:auto;min-width:0;font-size:10px;padding:3px 4px;}
+    .period-range span{font-size:10px;}
     .toolbar>.btn-primary{width:100%;}
-    .column,.trash-column{height:calc(100vh - 190px);}
-    .report-summary{grid-template-columns:1fr;gap:10px;}
-    .report-summary .stat-card{height:auto;min-height:102px;}
+    .board{grid-template-columns:1fr;gap:11px;}
+    .column,.trash-column{height:auto;min-height:250px;}
+    .column .card-list,.trash-column .card-list{max-height:340px;min-height:90px;}
+    .report-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+    .report-summary .stat-card{height:auto;min-height:110px;padding:14px;}
+    .report-summary .stat-card .num{font-size:22px;}
     .report-top-grid .panel{height:320px;padding:16px;}
     .panel{padding:16px;}
     .modal-overlay{padding:10px;}
@@ -440,21 +470,32 @@
     .modal-footer{padding:12px 16px;}
     .modal-2col{gap:16px;}
     .modal-2col .col-right{padding:16px 0 0;border-left:0;border-top:1px solid var(--border);}
+    .history-item{flex-wrap:wrap;white-space:normal;}
+    .history-actions{margin-left:auto;}
+    .quick-reminder-row{flex-wrap:wrap;white-space:normal;gap:4px;}
+    .quick-reminder-btn{padding:5px 5px;font-size:10px;}
     .row2{grid-template-columns:1fr;gap:0;}
     .summary-list-modal{height:92vh;}
     .summary-list-modal .modal-body{padding:12px 14px;}
     .summary-list-modal table{min-width:560px;}
     .modal-footer .btn{padding-left:11px;padding-right:11px;}
   }
-  @media (max-width:390px){
+  @media (max-width:360px){
     .side-item span{font-size:10.5px;}
+    .period-range{width:100%;order:-1;}
+    .toolbar>.period-quick-button{flex:1 1 0;min-width:0;padding:7px 2px;font-size:11px;}
   }
 </style>
 </head>
 <body>
 
 <header class="topbar">
-  <h1>Quản lý công việc</h1>
+  <div class="brand-mark" aria-hidden="true">✓</div>
+  <div class="brand-copy">
+    <h1>Quản lý công việc</h1>
+    <span>Không gian làm việc của bạn</span>
+  </div>
+  <span class="storage-note"><span class="storage-dot" aria-hidden="true"></span>Lưu trên trình duyệt này</span>
 </header>
 
 <div class="app-body">
@@ -481,6 +522,7 @@
   "use strict";
 
   var STORAGE_KEY = "tqm_tasks_v1";
+  var SERIES_STORAGE_KEY = "tqm_series_v1";
   var STATUSES = [
     {key:"todo", label:"Mới", color:"#2f8fe0"},
     {key:"inprogress", label:"Đang thực hiện", color:"#e0378f"},
@@ -515,9 +557,9 @@
     reportFrom: null,
     reportTo: null,
     tasks: [],
+    series: {},
     activeTaskId: null,
     bulkOpen: false,
-    virtualTasks: {},
     workViewApi: null,
     reportViewApi: null
   };
@@ -526,11 +568,22 @@
   function loadTasks(){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      var tasks = raw ? JSON.parse(raw) : [];
+      return Array.isArray(tasks) ? tasks : [];
     }catch(e){ return []; }
   }
+  function loadSeries(){
+    try{
+      var raw = localStorage.getItem(SERIES_STORAGE_KEY);
+      var series = raw ? JSON.parse(raw) : {};
+      return series && typeof series === "object" && !Array.isArray(series) ? series : {};
+    }catch(e){ return {}; }
+  }
   function saveTasks(){
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks)); }catch(e){}
+    try{
+      localStorage.setItem(SERIES_STORAGE_KEY, JSON.stringify(state.series));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+    }catch(e){}
   }
 
   function uid(){
@@ -656,32 +709,12 @@
     if(inputs[0]) inputs[0].value = state[keys.from] || toolbarDateValue(range[0]);
     if(inputs[1]) inputs[1].value = state[keys.to] || toolbarDateValue(range[1]);
   }
-  // sinh danh sách ngày theo lịch lặp (hàng ngày/hàng tuần/hàng tháng), giữ nguyên giờ:phút hiện tại
-  function generateOccurrenceDates(startDateStr, repeat, endDateStr){
+  // Chỉ lưu ngày bắt đầu; các lần lặp còn lại được tính khi hiển thị.
+  function occurrenceStartDate(startDateStr){
     var now = new Date();
-    function atCurrentTime(dateStr){
-      var d = new Date(dateStr + "T00:00:00");
-      d.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
-      return d;
-    }
-    var dates = [atCurrentTime(startDateStr || todayDateValue())];
-    if(repeat === "none" || !endDateStr) return dates;
-    var end = new Date(endDateStr + "T23:59:59");
-    var cur = new Date(dates[0]);
-    var guard = 0;
-    while(guard < 365){
-      guard++;
-      var next = new Date(cur);
-      if(repeat === "daily") next.setDate(next.getDate()+1);
-      else if(repeat === "weekly") next.setDate(next.getDate()+7);
-      else if(repeat === "monthly") next.setMonth(next.getMonth()+1);
-      else if(repeat === "yearly") next.setFullYear(next.getFullYear()+1);
-      else break;
-      if(next.getTime() > end.getTime()) break;
-      dates.push(next);
-      cur = next;
-    }
-    return dates;
+    var start = new Date((startDateStr || todayDateValue()) + "T00:00:00");
+    start.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0);
+    return start.toISOString();
   }
   function startOfDay(d){ d=new Date(d); d.setHours(0,0,0,0); return d; }
   function endOfDay(d){ d=new Date(d); d.setHours(23,59,59,999); return d; }
@@ -719,6 +752,19 @@
   }
   function occurrenceDateOf(task){ return task.occurrenceDate || task.createdAt; }
   function isRecurringTask(task){ return !!(task && task.recurrenceId && task.recurrenceRule); }
+  function nextRecurrenceDate(current, rule, startIso){
+    var next = new Date(current);
+    if(rule === "daily") next.setDate(next.getDate() + 1);
+    else if(rule === "weekly") next.setDate(next.getDate() + 7);
+    else if(rule === "monthly" || rule === "yearly"){
+      var anchor = new Date(startIso);
+      var year = next.getFullYear() + (rule === "yearly" ? 1 : 0);
+      var month = rule === "monthly" ? next.getMonth() + 1 : anchor.getMonth();
+      var day = Math.min(anchor.getDate(), new Date(year, month + 1, 0).getDate());
+      next = new Date(year, month, day, next.getHours(), next.getMinutes(), next.getSeconds(), next.getMilliseconds());
+    } else return null;
+    return next;
+  }
   function recurrenceDates(task, range){
     if(!isRecurringTask(task)) return [];
     var start = new Date(task.recurrenceStart || occurrenceDateOf(task));
@@ -728,14 +774,16 @@
     var dates = [];
     var cur = new Date(start);
     var guard = 0;
+    if(hasRangeEnd && range[0] && (task.recurrenceRule === "daily" || task.recurrenceRule === "weekly")){
+      var interval = task.recurrenceRule === "daily" ? 1 : 7;
+      var dayGap = Math.floor((startOfDay(range[0]).getTime() - cur.getTime()) / (interval * 86400000));
+      if(dayGap > 2) cur.setDate(cur.getDate() + (dayGap - 2) * interval);
+    }
     while((!targetEnd || cur.getTime() <= targetEnd.getTime()) && (hasRangeEnd || guard < 365)){
       dates.push(new Date(cur));
       guard++;
-      if(task.recurrenceRule === "daily") cur.setDate(cur.getDate()+1);
-      else if(task.recurrenceRule === "weekly") cur.setDate(cur.getDate()+7);
-      else if(task.recurrenceRule === "monthly") cur.setMonth(cur.getMonth()+1);
-      else if(task.recurrenceRule === "yearly") cur.setFullYear(cur.getFullYear()+1);
-      else break;
+      cur = nextRecurrenceDate(cur, task.recurrenceRule, task.recurrenceStart || occurrenceDateOf(task));
+      if(!cur) break;
     }
     return dates;
   }
@@ -744,87 +792,100 @@
     var value = date.getTime();
     return value >= startOfDay(range[0]).getTime() && value <= endOfDay(range[1]).getTime();
   }
+  function makeVirtualTask(seriesId, date, definition){
+    var iso = date.toISOString();
+    return {
+      id: "virtual:" + seriesId + ":" + dateKey(iso),
+      isVirtual: true,
+      title: definition.title,
+      description: definition.description || "",
+      status: definition.initialStatus || "todo",
+      createdAt: iso,
+      occurrenceDate: iso,
+      history: [{at: iso, from: null, to: definition.initialStatus || "todo"}],
+      reminderAt: null,
+      reminderNotifiedAt: null,
+      recurrenceId: seriesId,
+      recurrenceRule: definition.rule,
+      recurrenceStart: definition.start,
+      recurrenceInitialStatus: definition.initialStatus || "todo"
+    };
+  }
   function getTaskById(taskId){
-    return state.tasks.find(function(t){ return t.id === taskId; }) || state.virtualTasks[taskId] || null;
+    var real = state.tasks.find(function(t){ return t.id === taskId; });
+    if(real) return real;
+    var match = /^virtual:([^:]+):(\d{4}-\d{2}-\d{2})$/.exec(taskId || "");
+    if(!match) return null;
+    var seriesId = match[1];
+    var key = match[2];
+    var definition = state.series[seriesId];
+    if(!definition || (definition.excludedDates || []).indexOf(key) !== -1) return null;
+    var override = state.tasks.find(function(t){
+      return t.recurrenceId === seriesId && dateKey(occurrenceDateOf(t)) === key;
+    });
+    if(override) return override;
+    var target = new Date(key + "T12:00:00");
+    var date = recurrenceDates({recurrenceId:seriesId, recurrenceRule:definition.rule, recurrenceStart:definition.start},
+      [startOfDay(target), endOfDay(target)]).find(function(candidate){ return dateKey(candidate) === key; });
+    return date ? makeVirtualTask(seriesId, date, definition) : null;
   }
   function materializeDisplayTask(displayTask){
     if(!displayTask || !displayTask.isVirtual) return displayTask;
+    var definition = state.series[displayTask.recurrenceId];
+    if(!definition || (definition.excludedDates || []).indexOf(dateKey(displayTask.occurrenceDate)) !== -1) return null;
     var existing = state.tasks.find(function(t){
       return t.recurrenceId === displayTask.recurrenceId && dateKey(occurrenceDateOf(t)) === dateKey(displayTask.occurrenceDate);
     });
     if(existing) return existing;
+    var createdAt = new Date(Math.min(Date.now(), new Date(displayTask.occurrenceDate).getTime())).toISOString();
     var created = {
       id: uid(),
       title: displayTask.title,
       description: displayTask.description || "",
       status: displayTask.status || "todo",
-      createdAt: displayTask.occurrenceDate,
-      history: [{at: displayTask.occurrenceDate, from: null, to: displayTask.status || "todo"}],
+      createdAt: createdAt,
+      history: [{at: createdAt, from: null, to: displayTask.status || "todo"}],
       reminderAt: displayTask.reminderAt || null,
       reminderNotifiedAt: null,
       recurrenceId: displayTask.recurrenceId,
       recurrenceRule: displayTask.recurrenceRule,
       recurrenceStart: displayTask.recurrenceStart,
-      recurrenceEnd: displayTask.recurrenceEnd,
-      recurrenceExcludedDates: (displayTask.recurrenceExcludedDates || []).slice(),
       recurrenceInitialStatus: displayTask.recurrenceInitialStatus || "todo",
       occurrenceDate: displayTask.occurrenceDate
     };
     state.tasks.push(created);
-    saveTasks();
     return created;
   }
   function getDisplayTasks(range){
     var result = state.tasks.slice();
-    var series = {};
+    var actualDatesBySeries = {};
     state.tasks.forEach(function(task){
       if(!isRecurringTask(task)) return;
-      if(!series[task.recurrenceId]) series[task.recurrenceId] = [];
-      series[task.recurrenceId].push(task);
+      if(!actualDatesBySeries[task.recurrenceId]) actualDatesBySeries[task.recurrenceId] = {};
+      actualDatesBySeries[task.recurrenceId][dateKey(occurrenceDateOf(task))] = true;
     });
-    Object.keys(series).forEach(function(seriesId){
-      var seriesTasks = series[seriesId];
-      var template = seriesTasks.slice().sort(function(a,b){
-        return new Date(occurrenceDateOf(a)) - new Date(occurrenceDateOf(b));
-      })[0];
-      var actualDates = {};
-      var excludedDates = {};
-      seriesTasks.forEach(function(task){ actualDates[dateKey(occurrenceDateOf(task))] = true; });
-      seriesTasks.forEach(function(task){
-        (task.recurrenceExcludedDates || []).forEach(function(key){ excludedDates[key] = true; });
-      });
-      recurrenceDates(template, range).forEach(function(date){
+    Object.keys(state.series).forEach(function(seriesId){
+      var definition = state.series[seriesId];
+      if(!definition || !definition.rule || !definition.start) return;
+      var actualDates = actualDatesBySeries[seriesId] || {};
+      var excludedDates = new Set(definition.excludedDates || []);
+      recurrenceDates({recurrenceId:seriesId, recurrenceRule:definition.rule, recurrenceStart:definition.start}, range).forEach(function(date){
         var key = dateKey(date);
-        if(actualDates[key] || excludedDates[key] || !dateInRangeValue(date, range)) return;
-        var iso = date.toISOString();
-        var virtualTask = {
-          id: "virtual:" + seriesId + ":" + key,
-          isVirtual: true,
-          title: template.title,
-          description: template.description || "",
-          status: template.recurrenceInitialStatus || "todo",
-          createdAt: iso,
-          occurrenceDate: iso,
-          history: [{at: iso, from: null, to: template.recurrenceInitialStatus || "todo"}],
-          reminderAt: null,
-          reminderNotifiedAt: null,
-          recurrenceId: seriesId,
-          recurrenceRule: template.recurrenceRule,
-          recurrenceStart: template.recurrenceStart,
-          recurrenceEnd: template.recurrenceEnd,
-          recurrenceExcludedDates: (template.recurrenceExcludedDates || []).slice(),
-          recurrenceInitialStatus: template.recurrenceInitialStatus || "todo"
-        };
-        state.virtualTasks[virtualTask.id] = virtualTask;
-        result.push(virtualTask);
+        if(actualDates[key] || excludedDates.has(key) || !dateInRangeValue(date, range)) return;
+        result.push(makeVirtualTask(seriesId, date, definition));
       });
     });
     return result;
   }
   function normalizeRecurringTasks(){
     var groups = {};
+    var legacyExcludedBySeries = {};
     var changed = false;
     state.tasks.forEach(function(task){
+      if(task.recurrenceId && task.recurrenceExcludedDates){
+        if(!legacyExcludedBySeries[task.recurrenceId]) legacyExcludedBySeries[task.recurrenceId] = new Set();
+        task.recurrenceExcludedDates.forEach(function(key){ legacyExcludedBySeries[task.recurrenceId].add(key); });
+      }
       if(task.recurrenceId && task.recurrenceRule && task.recurrenceEnd){
         task.recurrenceEnd = null;
         changed = true;
@@ -854,10 +915,9 @@
         task.recurrenceInitialStatus = "todo";
         task.occurrenceDate = task.createdAt;
         changed = true;
-        var isPristineTodo = task.status === "todo" && task.history && task.history.length <= 1;
-        var isPristineTrash = task.status === "trash" && task.history && task.history.length === 2 &&
-          task.history[1].to === "trash";
-        if(index > 0 && (isPristineTodo || isPristineTrash) && !task.description && !task.reminderAt){
+        var isPristineTodo = task.status === "todo" && task.title === items[0].title &&
+          task.history && task.history.length === 1 && task.history[0].at === task.createdAt;
+        if(index > 0 && isPristineTodo && !task.description && !task.reminderAt){
           removeIds[task.id] = true;
         }
       });
@@ -866,6 +926,36 @@
       state.tasks = state.tasks.filter(function(task){ return !removeIds[task.id]; });
       changed = true;
     }
+    var recurringGroups = {};
+    state.tasks.forEach(function(task){
+      if(!isRecurringTask(task)) return;
+      if(!recurringGroups[task.recurrenceId]) recurringGroups[task.recurrenceId] = [];
+      recurringGroups[task.recurrenceId].push(task);
+    });
+    Object.keys(recurringGroups).forEach(function(seriesId){
+      var items = recurringGroups[seriesId].slice().sort(function(a,b){
+        return new Date(occurrenceDateOf(a)) - new Date(occurrenceDateOf(b));
+      });
+      if(!state.series[seriesId]){
+        var seed = items[0];
+        state.series[seriesId] = {
+          title:seed.title,
+          description:seed.description || "",
+          rule:seed.recurrenceRule,
+          start:seed.recurrenceStart || occurrenceDateOf(seed),
+          anchorDate:dateKey(occurrenceDateOf(seed)),
+          initialStatus:seed.recurrenceInitialStatus || "todo",
+          excludedDates:[]
+        };
+        changed = true;
+      }
+      var definition = state.series[seriesId];
+      if(!definition.anchorDate){ definition.anchorDate = dateKey(occurrenceDateOf(items[0])); changed = true; }
+      if(!Array.isArray(definition.excludedDates)){ definition.excludedDates = []; changed = true; }
+      if(legacyExcludedBySeries[seriesId]) legacyExcludedBySeries[seriesId].forEach(function(key){
+        if(definition.excludedDates.indexOf(key) === -1){ definition.excludedDates.push(key); changed = true; }
+      });
+    });
     if(changed) saveTasks();
   }
   function getPreviousRange(period, range){
@@ -920,7 +1010,7 @@
   }
 
   // ---------- task ops ----------
-  function addTask(title, status, createdAt, recurrenceId){
+  function addTask(title, status, createdAt, recurrenceId, persist){
     title = (title||"").trim();
     if(!title) return;
     var now = createdAt || new Date().toISOString();
@@ -936,22 +1026,19 @@
       recurrenceId: recurrenceId || null
     };
     state.tasks.push(task);
-    saveTasks();
+    if(persist !== false) saveTasks();
     return task;
   }
   function addTasksBulk(lines, status, createdAt){
-    lines.forEach(function(line){ addTask(line, status, createdAt); });
-  }
-  function deleteTasks(ids){
-    var idSet = {};
-    ids.forEach(function(id){ idSet[id] = true; });
-    state.tasks = state.tasks.filter(function(t){ return !idSet[t.id]; });
+    lines.forEach(function(line){ addTask(line, status, createdAt, null, false); });
     saveTasks();
   }
   function setStatus(taskId, newStatus){
-    var task = materializeDisplayTask(getTaskById(taskId));
-    if(!task || !canChangeStatus(task.status, newStatus)) return false;
-    if(task.status === newStatus) return true;
+    var displayTask = getTaskById(taskId);
+    if(!displayTask || !canChangeStatus(displayTask.status, newStatus)) return false;
+    if(displayTask.status === newStatus) return true;
+    var task = materializeDisplayTask(displayTask);
+    if(!task) return false;
     var now = new Date().toISOString();
     task.history.push({ at: now, from: task.status, to: newStatus });
     task.status = newStatus;
@@ -974,10 +1061,10 @@
   }
   // Đưa đúng phiên bản đang chọn vào thùng rác; chưa xóa vĩnh viễn nên chưa tạo bản kế tiếp.
   function setTaskToTrash(taskId){
-    var task = materializeDisplayTask(getTaskById(taskId));
+    var task = getTaskById(taskId);
     if(!task || !canChangeStatus(task.status, "trash")) return false;
     if(task.status === "trash") return true;
-    return setStatus(task.id, "trash");
+    return setStatus(taskId, "trash");
   }
   function moveTaskToTrash(taskId, onApplied){
     if(!setTaskToTrash(taskId)) return;
@@ -985,8 +1072,12 @@
     render();
   }
   function updateTaskFields(taskId, title, description, reminderAt){
-    var task = materializeDisplayTask(getTaskById(taskId));
-    if(!task) return;
+    var displayTask = getTaskById(taskId);
+    if(!displayTask) return false;
+    if(title === displayTask.title && description === (displayTask.description || "") &&
+       reminderAt === (displayTask.reminderAt || null)) return false;
+    var task = materializeDisplayTask(displayTask);
+    if(!task) return false;
     task.title = title;
     task.description = description;
     if(reminderAt !== task.reminderAt){
@@ -994,79 +1085,86 @@
       task.reminderNotifiedAt = null; // đổi giờ nhắc mới thì cho phép báo lại
     }
     saveTasks();
+    return true;
   }
   function updateTaskHistoryTimes(taskId, historyTimes){
-    var task = materializeDisplayTask(getTaskById(taskId));
+    var displayTask = getTaskById(taskId);
+    if(!displayTask || !historyTimes.some(function(item){
+      return displayTask.history[item.index] && displayTask.history[item.index].at !== item.iso;
+    })) return false;
+    var task = materializeDisplayTask(displayTask);
     if(!task) return false;
-    var previousCreatedAt = task.createdAt;
     historyTimes.forEach(function(item){
-      item.history.at = item.iso;
+      if(task.history[item.index]) task.history[item.index].at = item.iso;
     });
     var firstEvent = task.history.find(function(item){ return item.from === null; }) || task.history[0];
-    if(firstEvent){
-      task.createdAt = firstEvent.at;
-      if(task.recurrenceId){
-        task.occurrenceDate = firstEvent.at;
-        if(task.recurrenceStart === previousCreatedAt){
-          task.recurrenceStart = firstEvent.at;
-        }
-      }
-    }
+    if(firstEvent) task.createdAt = firstEvent.at;
     saveTasks();
     return true;
   }
   function promoteNextVirtualTask(task){
     if(!isRecurringTask(task)) return;
+    var definition = state.series[task.recurrenceId];
+    if(!definition || definition.anchorDate !== dateKey(occurrenceDateOf(task))) return;
     var nextDate = new Date(occurrenceDateOf(task));
-    var excludedDates = {};
-    state.tasks.forEach(function(candidate){
-      if(candidate.recurrenceId !== task.recurrenceId) return;
-      (candidate.recurrenceExcludedDates || []).forEach(function(key){ excludedDates[key] = true; });
-    });
-    for(var i = 0; i <= Object.keys(excludedDates).length; i++){
-      if(task.recurrenceRule === "daily") nextDate.setDate(nextDate.getDate() + 1);
-      else if(task.recurrenceRule === "weekly") nextDate.setDate(nextDate.getDate() + 7);
-      else if(task.recurrenceRule === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
-      else if(task.recurrenceRule === "yearly") nextDate.setFullYear(nextDate.getFullYear() + 1);
-      else return;
+    var excludedDates = new Set(definition.excludedDates || []);
+    for(var i = 0; i <= excludedDates.size; i++){
+      nextDate = nextRecurrenceDate(nextDate, definition.rule, definition.start);
+      if(!nextDate) return;
       var key = dateKey(nextDate);
-      if(excludedDates[key]) continue;
+      if(excludedDates.has(key)) continue;
       if(state.tasks.some(function(candidate){
         return candidate.recurrenceId === task.recurrenceId && dateKey(occurrenceDateOf(candidate)) === key;
-      })) return;
+      })){
+        definition.anchorDate = key;
+        return;
+      }
       var next = getDisplayTasks([startOfDay(nextDate), endOfDay(nextDate)]).find(function(candidate){
         return candidate.isVirtual && candidate.recurrenceId === task.recurrenceId &&
           dateKey(candidate.occurrenceDate) === key;
       });
-      if(next) materializeDisplayTask(next);
+      if(next){
+        materializeDisplayTask(next);
+        definition.anchorDate = key;
+      }
       return;
     }
   }
   function deleteTask(taskId){
-    var task = materializeDisplayTask(getTaskById(taskId));
+    var task = getTaskById(taskId);
     if(!task) return;
     var deletedOccurrence = dateKey(occurrenceDateOf(task));
     promoteNextVirtualTask(task);
     if(isRecurringTask(task)){
-      state.tasks.forEach(function(candidate){
-        if(candidate.id === task.id || candidate.recurrenceId !== task.recurrenceId) return;
-        candidate.recurrenceExcludedDates = candidate.recurrenceExcludedDates || [];
-        if(candidate.recurrenceExcludedDates.indexOf(deletedOccurrence) === -1){
-          candidate.recurrenceExcludedDates.push(deletedOccurrence);
-        }
-      });
+      var excluded = state.series[task.recurrenceId].excludedDates;
+      if(excluded.indexOf(deletedOccurrence) === -1) excluded.push(deletedOccurrence);
     }
     state.tasks = state.tasks.filter(function(t){ return t.id !== task.id; });
     saveTasks();
   }
+  function deleteRecurringSeries(seriesId){
+    state.tasks = state.tasks.filter(function(task){ return task.recurrenceId !== seriesId; });
+    delete state.series[seriesId];
+    saveTasks();
+  }
   function emptyTrash(){
-    var trashIds = state.tasks.filter(function(task){ return task.status === "trash"; })
-      .map(function(task){ return task.id; });
-    trashIds.forEach(function(taskId){ deleteTask(taskId); });
+    var trashTasks = state.tasks.filter(function(task){ return task.status === "trash"; });
+    if(!trashTasks.length) return;
+    var removedAnchors = [];
+    trashTasks.forEach(function(task){
+      if(!isRecurringTask(task) || !state.series[task.recurrenceId]) return;
+      var definition = state.series[task.recurrenceId];
+      var key = dateKey(occurrenceDateOf(task));
+      if(definition.excludedDates.indexOf(key) === -1) definition.excludedDates.push(key);
+      if(definition.anchorDate === key) removedAnchors.push(task);
+    });
+    state.tasks = state.tasks.filter(function(task){ return task.status !== "trash"; });
+    removedAnchors.forEach(promoteNextVirtualTask);
     saveTasks();
   }
   function taskRelevantToRange(task, range){
     if(!range[0]) return true;
+    if(isRecurringTask(task)) return inRange(occurrenceDateOf(task), range);
     if(inRange(task.createdAt, range)) return true;
     return task.history.some(function(h){ return inRange(h.at, range); });
   }
@@ -1357,7 +1455,7 @@
         el("th", {style:"width:36px;"}, ["STT"]),
         el("th", {}, ["Tên công việc"]),
         el("th", {}, ["Trạng thái"]),
-        el("th", {}, ["Ngày tạo"]),
+        el("th", {}, ["Ngày thực hiện"]),
         el("th", {}, ["Nhắc nhở"]),
         el("th", {style:"width:120px;"}, ["Tiến độ"])
       ])]));
@@ -1370,7 +1468,7 @@
         tr.appendChild(el("td", {}, [String(idx+1)]));
         tr.appendChild(el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]));
         tr.appendChild(el("td", {}, [statusBadge(t.status)]));
-        tr.appendChild(el("td", {style:"white-space:nowrap;"}, [fmtDate(t.createdAt)]));
+        tr.appendChild(el("td", {style:"white-space:nowrap;"}, [fmtDate(occurrenceDateOf(t))]));
         tr.appendChild(el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [t.reminderAt ? fmtDateTime(t.reminderAt) : "—"]));
         var pct = PROGRESS_MAP[t.status] || 0;
         var progressCell = el("td", {});
@@ -1447,6 +1545,10 @@
     var activeWorkRange = range;
 
     var container = el("div");
+    container.appendChild(el("div", {class:"view-heading"}, [
+      el("div", {}, [el("h2", {}, ["Bảng công việc"]),
+        el("p", {}, ["Kéo công việc giữa các trạng thái hoặc mở thẻ để cập nhật."])])
+    ]));
 
     var toolbar = el("div", {class:"toolbar"});
     toolbar.appendChild(periodButtons([
@@ -1504,22 +1606,23 @@
     function buildWorkTaskCard(t, colDef){
       var card = el("div", {
         class:"task-card", draggable:"true", "data-task-id":t.id,
-        "data-task-title":t.title.toLowerCase(), "data-virtual":t.isVirtual ? "true" : "false"
+        "data-task-title":t.title.toLowerCase(), "data-virtual":t.isVirtual ? "true" : "false",
+        role:"button", tabindex:"0", "aria-label":"Mở công việc " + t.title + " ngày " + fmtDate(occurrenceDateOf(t))
       });
       card.addEventListener("dragstart", function(e){
-        var dragTask = materializeDisplayTask(t);
-        card.setAttribute("data-task-id", dragTask.id);
-        card.setAttribute("data-virtual", "false");
-        e.dataTransfer.setData("text/plain", dragTask.id);
+        e.dataTransfer.setData("text/plain", card.getAttribute("data-task-id"));
         setTimeout(function(){ card.classList.add("dragging"); }, 0);
       });
       card.addEventListener("dragend", function(){ card.classList.remove("dragging"); });
-      card.addEventListener("click", function(){ openTaskDetail(t.id); });
+      card.addEventListener("click", function(){ openTaskDetail(card.getAttribute("data-task-id")); });
+      card.addEventListener("keydown", function(e){
+        if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openTaskDetail(card.getAttribute("data-task-id")); }
+      });
       card.appendChild(el("div", {class:"t-title"}, [t.title]));
       var pct = PROGRESS_MAP[t.status] || 0;
       card.appendChild(progressBar(pct, colDef.color));
       var metaBottom = el("div", {style:"font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;justify-content:space-between;gap:6px;"});
-      metaBottom.appendChild(el("span", {}, [fmtDate(t.createdAt)]));
+      metaBottom.appendChild(el("span", {}, [fmtDate(occurrenceDateOf(t))]));
       if(t.reminderAt){
         var reminderPast = new Date(t.reminderAt).getTime() <= Date.now();
         metaBottom.appendChild(el("span", {style:"color:"+(reminderPast?"#ef4444":"#e0378f")+";font-weight:600;"}, ["Nhắc: "+fmtDateTime(t.reminderAt)]));
@@ -1560,6 +1663,7 @@
         type:"search",
         value:(state.workSearchByStatus && state.workSearchByStatus[colDef.key]) || "",
         placeholder:"Tìm công việc...",
+        "aria-label":"Tìm trong trạng thái " + colDef.label,
         class:"column-search",
         style:"--search-color:"+colDef.color+";"
       });
@@ -1595,9 +1699,9 @@
         e.preventDefault();
         list.classList.remove("drag-over");
         var id = e.dataTransfer.getData("text/plain");
-        var movingTask = materializeDisplayTask(getTaskById(id));
+        var movingTask = getTaskById(id);
         if(!movingTask) return;
-        var card = board.querySelector('[data-task-id="' + movingTask.id + '"]');
+        var card = board.querySelector('[data-task-id="' + id + '"]');
         if(!canChangeStatus(movingTask.status, colDef.key)){
           var suggestedStatusKey = getSuggestedStatusKey(movingTask.status);
           var warningMessage = [
@@ -1614,6 +1718,9 @@
         }
         if(!setStatus(id, colDef.key)) return;
         if(card){
+          var storedTask = materializeDisplayTask(movingTask);
+          card.setAttribute("data-task-id", storedTask.id);
+          card.setAttribute("data-virtual", "false");
           list.appendChild(card);
           refreshCardProgress(card, colDef);
           applyColumnSearch(column, state.workSearchByStatus[colDef.key]);
@@ -1652,11 +1759,14 @@
       e.preventDefault();
       trashList.classList.remove("drag-over");
       var id = e.dataTransfer.getData("text/plain");
-      var movingTask = materializeDisplayTask(getTaskById(id));
+      var movingTask = getTaskById(id);
       if(!movingTask) return;
-      if(!setTaskToTrash(movingTask.id)) return;
-      var card = board.querySelector('[data-task-id="' + movingTask.id + '"]');
+      var card = board.querySelector('[data-task-id="' + id + '"]');
+      if(!setTaskToTrash(id)) return;
       if(card){
+        var storedTask = materializeDisplayTask(movingTask);
+        card.setAttribute("data-task-id", storedTask.id);
+        card.setAttribute("data-virtual", "false");
         var emptyHint = trashList.querySelector(".trash-empty-hint");
         if(emptyHint) emptyHint.remove();
         trashList.appendChild(card);
@@ -1673,7 +1783,8 @@
       trashTasks.forEach(function(t){
         var card = el("div", {
           class:"task-card", draggable:"true", "data-task-id":t.id,
-          "data-task-title":t.title.toLowerCase()
+          "data-task-title":t.title.toLowerCase(), role:"button", tabindex:"0",
+          "aria-label":"Mở công việc " + t.title + " trong thùng rác"
         });
         card.addEventListener("dragstart", function(e){
           e.dataTransfer.setData("text/plain", t.id);
@@ -1681,6 +1792,9 @@
         });
         card.addEventListener("dragend", function(){ card.classList.remove("dragging"); });
         card.addEventListener("click", function(){ openTaskDetail(t.id); });
+        card.addEventListener("keydown", function(e){
+          if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openTaskDetail(t.id); }
+        });
         card.appendChild(el("div", {class:"t-title"}, [t.title]));
         card.appendChild(el("div", {style:"font-size:11px;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))]));
         var recurrenceText = recurrenceLabel(t);
@@ -1693,6 +1807,7 @@
       type:"search",
       value:(state.workSearchByStatus && state.workSearchByStatus.trash) || "",
       placeholder:"Tìm công việc...",
+      "aria-label":"Tìm trong thùng rác",
       class:"column-search",
       style:"--search-color:"+TRASH_STATUS.color+";"
     });
@@ -1769,6 +1884,12 @@
   function renderReportView(existingContainer){
     var isRefresh = !!existingContainer;
     var container = existingContainer || el("div", {class:"report-view"});
+    if(!existingContainer){
+      container.appendChild(el("div", {class:"view-heading"}, [
+        el("div", {}, [el("h2", {}, ["Tổng quan"]),
+          el("p", {}, ["Theo dõi tiến độ và công việc trong khoảng thời gian bạn chọn."])])
+      ]));
+    }
     var toolbar = container.querySelector(".toolbar");
     if(!toolbar){
       toolbar = el("div", {class:"toolbar"});
@@ -1911,14 +2032,14 @@
       todoTable.appendChild(el("thead", {}, [el("tr", {}, [
         el("th", {}, ["Tên công việc"]),
         el("th", {}, ["Trạng thái"]),
-        el("th", {}, ["Ngày tạo"])
+        el("th", {}, ["Ngày thực hiện"])
       ])]));
       var todoBody = el("tbody");
       todoInRange.forEach(function(t){
         todoBody.appendChild(el("tr", {style:"cursor:pointer;", onclick:function(){ openTaskDetail(t.id); }}, [
           el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]),
           el("td", {}, [statusBadge(t.status)]),
-          el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDate(t.createdAt)])
+          el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))])
         ]));
       });
       todoTable.appendChild(todoBody);
@@ -1967,7 +2088,7 @@
 
   // ---------- task detail modal ----------
   function renderTaskModal(){
-    var task = state.tasks.find(function(t){ return t.id === state.activeTaskId; });
+    var task = getTaskById(state.activeTaskId);
     if(!task){ modalRoot.innerHTML = ""; return; }
 
     var overlay = el("div", {class:"modal-overlay", onclick: function(e){ if(e.target === overlay) closeModal(); }});
@@ -2008,8 +2129,11 @@
     row2.appendChild(statusField);
 
     var createdField = el("div", {class:"field"});
-    createdField.appendChild(el("label", {}, ["Ngày tạo"]));
-    createdField.appendChild(el("input", {type:"text", value: fmtDateTime(task.createdAt), disabled:"disabled"}));
+    createdField.appendChild(el("label", {}, [isRecurringTask(task) ? "Ngày thực hiện" : "Ngày tạo"]));
+    createdField.appendChild(el("input", {type:"text", value: fmtDateTime(occurrenceDateOf(task)), disabled:"disabled"}));
+    if(isRecurringTask(task)) createdField.appendChild(el("p", {class:"recurrence-note"}, [
+      recurrenceLabel(task) + " · Chỉnh sửa chỉ áp dụng cho ngày này."
+    ]));
     row2.appendChild(createdField);
     colLeft.appendChild(row2);
 
@@ -2192,7 +2316,7 @@
             render();
           },
           onExtra: function(){
-            deleteTasks([task.id].concat(seriesMates.map(function(t){ return t.id; })));
+            deleteRecurringSeries(task.recurrenceId);
             state.activeTaskId = null;
             render();
           }
@@ -2225,7 +2349,7 @@
       var historyTimes = [];
       historyEdits.forEach(function(edit){
         var iso = historyEditIso(edit);
-        historyTimes.push({history:edit.history, iso:iso});
+        historyTimes.push({index:task.history.indexOf(edit.history), iso:iso});
       });
       var reminderIso = fromDatetimeLocalValue(reminderInput.value);
       var originalLocal = task.reminderAt ? toDatetimeLocalValue(task.reminderAt) : "";
@@ -2236,14 +2360,14 @@
         reminderInput.focus();
         return;
       }
+      var newStatus = selectedStatus;
+      if(newStatus !== task.status && !canChangeStatus(task.status, newStatus)){
+        refreshStatusValidation();
+        return;
+      }
       updateTaskHistoryTimes(task.id, historyTimes);
       updateTaskFields(task.id, titleInput.value.trim() || task.title, descArea.value, reminderIso);
-      var newStatus = selectedStatus;
       if(newStatus !== task.status){
-        if(!canChangeStatus(task.status, newStatus)){
-          refreshStatusValidation();
-          return;
-        }
         if(newStatus === "trash"){
           moveTaskToTrash(task.id, function(){ state.activeTaskId = null; });
           return;
@@ -2270,7 +2394,7 @@
     modalRoot.innerHTML = "";
   }
   function openTaskDetail(taskId){
-    var task = materializeDisplayTask(getTaskById(taskId));
+    var task = getTaskById(taskId);
     if(!task) return;
     state.activeTaskId = task.id;
     renderTaskModal();
@@ -2315,6 +2439,9 @@
       {value:"yearly", label:"Hằng năm"}
     ].forEach(function(o){ repeatSelect.appendChild(el("option", {value:o.value}, [o.label])); });
     repeatField.appendChild(repeatSelect);
+    repeatField.appendChild(el("p", {class:"field-hint"}, [
+      "Lịch lặp không giới hạn. Mỗi lần chỉ lưu riêng khi bạn chỉnh sửa."
+    ]));
     row1.appendChild(repeatField);
     body.appendChild(row1);
 
@@ -2327,20 +2454,23 @@
     rightBtns.appendChild(el("button", {class:"btn btn-primary", onclick: function(){
       var lines = area.value.split("\n").map(function(l){ return l.trim(); }).filter(function(l){ return l.length; });
       if(!lines.length) return;
-      var dates = generateOccurrenceDates(dateInput.value, repeatSelect.value, null);
+      var startIso = occurrenceStartDate(dateInput.value);
       lines.forEach(function(line){
-        var seriesId = repeatSelect.value !== "none" && dates.length ? uid() : null;
-        var task = addTask(line, "todo", dates[0].toISOString(), seriesId);
+        var seriesId = repeatSelect.value !== "none" ? uid() : null;
+        var task = addTask(line, "todo", startIso, seriesId, false);
         if(task && seriesId){
           task.recurrenceRule = repeatSelect.value;
-          task.recurrenceStart = dates[0].toISOString();
-          task.recurrenceEnd = null;
-          task.recurrenceExcludedDates = [];
+          task.recurrenceStart = startIso;
           task.recurrenceInitialStatus = "todo";
-          task.occurrenceDate = dates[0].toISOString();
-          saveTasks();
+          task.occurrenceDate = startIso;
+          state.series[seriesId] = {
+            title:line, description:"", rule:repeatSelect.value,
+            start:startIso, anchorDate:dateKey(startIso),
+            initialStatus:"todo", excludedDates:[]
+          };
         }
       });
+      saveTasks();
       closeModal();
       render();
     }}, ["Thêm công việc"]));
@@ -2372,6 +2502,7 @@
 
   // ---------- init ----------
   state.tasks = loadTasks();
+  state.series = loadSeries();
   normalizeRecurringTasks();
   render();
   checkReminders();
