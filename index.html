@@ -177,11 +177,32 @@
 
   .history-list{border-top:1px solid var(--border);margin-top:6px;padding-top:8px;max-height:340px;overflow:auto;flex:1;}
   .col-right .history-list{max-height:none;}
-  .history-item{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:8px 6px;border-radius:8px;flex-wrap:wrap;}
+  .history-item{position:relative;display:flex;align-items:center;gap:7px;font-size:12.5px;padding:8px 6px;border-radius:8px;flex-wrap:nowrap;white-space:nowrap;min-width:0;}
   .history-item:hover{background:var(--bg);}
+  .history-time-cell{display:flex;align-items:center;min-width:0;}
+  .history-status-cell{display:flex;align-items:center;gap:7px;min-width:0;}
+  .history-actions{display:flex;align-items:center;gap:2px;margin-left:auto;flex:0 0 auto;}
   .history-item .h-time{color:var(--text-dim);white-space:nowrap;font-size:11.5px;}
   .history-item .h-title{color:var(--text-dim);}
   .history-item .h-arrow{color:var(--text-dim);}
+  .history-time-input{display:none;flex:0 1 210px;min-width:190px;width:210px;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:3px 0;background:transparent;color:var(--text-dim);font-size:11.5px;line-height:1.3;}
+  .history-item.is-editing .h-time{display:none;}
+  .history-item.is-editing .history-time-input{display:block;}
+  .history-item.is-editing{display:block;padding-right:6px;}
+  .history-item.is-editing .history-time-cell{display:block;min-height:28px;padding-right:58px;}
+  .history-item.is-editing .history-status-cell{margin-top:7px;}
+  .history-item.is-editing .history-actions{position:absolute;right:6px;top:8px;}
+  .history-edit-btn{border:0;background:transparent;color:var(--text-dim);padding:3px 5px;border-radius:5px;cursor:pointer;font-size:13px;line-height:1;}
+  .history-edit-btn:hover{background:var(--pink-soft);color:var(--pink-dark);}
+  .history-confirm-btn{display:none;border:0;background:transparent;color:#16a34a;padding:3px 5px;border-radius:5px;cursor:pointer;font-size:14px;font-weight:800;line-height:1;}
+  .history-confirm-btn:hover{background:#ecfdf3;}
+  .history-cancel-btn{display:none;margin-left:0;border:0;background:transparent;color:#c01048;padding:3px 5px;border-radius:5px;cursor:pointer;font-size:13px;line-height:1;}
+  .history-cancel-btn:hover{background:#fff1f3;}
+  .history-item .badge{flex:0 0 auto;padding-left:7px;padding-right:7px;font-size:10px;}
+  .history-item .h-arrow{flex:0 0 auto;}
+  .history-time-input:focus{outline:none;border-bottom-color:var(--pink);box-shadow:none;}
+  .history-row-error{display:none;color:#ef4444;font-size:10.5px;font-weight:600;line-height:1.25;margin-top:4px;white-space:normal;}
+  .history-row-error.show{display:block;}
   .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;text-align:center;vertical-align:middle;}
 
   /* Report */
@@ -964,6 +985,26 @@
     }
     saveTasks();
   }
+  function updateTaskHistoryTimes(taskId, historyTimes){
+    var task = materializeDisplayTask(getTaskById(taskId));
+    if(!task) return false;
+    var previousCreatedAt = task.createdAt;
+    historyTimes.forEach(function(item){
+      item.history.at = item.iso;
+    });
+    var firstEvent = task.history.find(function(item){ return item.from === null; }) || task.history[0];
+    if(firstEvent){
+      task.createdAt = firstEvent.at;
+      if(task.recurrenceId){
+        task.occurrenceDate = firstEvent.at;
+        if(task.recurrenceStart === previousCreatedAt){
+          task.recurrenceStart = firstEvent.at;
+        }
+      }
+    }
+    saveTasks();
+    return true;
+  }
   function promoteNextVirtualTask(task){
     if(!isRecurringTask(task)) return;
     var currentTime = new Date(occurrenceDateOf(task)).getTime();
@@ -1450,6 +1491,24 @@
       column.appendChild(head);
       column.appendChild(columnSearch);
 
+      if(colDef.key === "todo"){
+        var quick = el("div", {class:"quick-add"});
+        var input = el("input", {type:"text", placeholder:"+ Thêm việc, Enter để lưu"});
+        input.addEventListener("keydown", function(e){
+          if(e.key === "Enter"){
+            addTask(input.value, colDef.key);
+            input.value = "";
+            render();
+            setTimeout(function(){
+              var el2 = document.querySelector(".quick-add input");
+              if(el2) el2.focus();
+            }, 0);
+          }
+        });
+        quick.appendChild(input);
+        column.appendChild(quick);
+      }
+
       var list = el("div", {class:"card-list"});
       list.addEventListener("dragover", function(e){ e.preventDefault(); list.classList.add("drag-over"); });
       list.addEventListener("dragleave", function(){ list.classList.remove("drag-over"); });
@@ -1517,25 +1576,6 @@
 
       column.appendChild(list);
       applyColumnSearch(column, state.workSearchByStatus[colDef.key]);
-
-      if(colDef.key === "todo"){
-        var quick = el("div", {class:"quick-add"});
-        var input = el("input", {type:"text", placeholder:"+ Thêm việc, Enter để lưu"});
-        input.addEventListener("keydown", function(e){
-          if(e.key === "Enter"){
-            addTask(input.value, colDef.key);
-            input.value = "";
-            render();
-            // refocus quick add sau khi render lại
-            setTimeout(function(){
-              var el2 = document.querySelector(".quick-add input");
-              if(el2) el2.focus();
-            }, 0);
-          }
-        });
-        quick.appendChild(input);
-        column.appendChild(quick);
-      }
 
       board.appendChild(column);
     });
@@ -1956,17 +1996,116 @@
     var histField = el("div", {class:"field", style:"margin-bottom:0;"});
     histField.appendChild(el("label", {}, ["Lịch sử hoạt động"]));
     var histList = el("div", {class:"history-list"});
+    var historyEdits = [];
     task.history.slice().reverse().forEach(function(h){
       var item = el("div", {class:"history-item"});
-      item.appendChild(el("span", {class:"h-time"}, [fmtDateTime(h.at)]));
+      var historyTimeCell = el("div", {class:"history-time-cell"});
+      var historyTimeText = el("span", {class:"h-time"}, [fmtDateTime(h.at)]);
+      var historyTimeInput = el("input", {
+        type:"datetime-local",
+        class:"history-time-input",
+        value:toDatetimeLocalValue(h.at),
+        title:"Chỉnh thời gian hoạt động"
+      });
+      var historyRowError = el("div", {class:"history-row-error"}, []);
+      var historyEdit = {history:h, input:historyTimeInput, item:item, draftIso:h.at, error:historyRowError};
+      historyEdits.push(historyEdit);
+      historyTimeCell.appendChild(historyTimeText);
+      historyTimeCell.appendChild(historyTimeInput);
+      historyTimeCell.appendChild(historyRowError);
+      item.appendChild(historyTimeCell);
+      var historyStatusCell = el("div", {class:"history-status-cell"});
       if(h.from !== null){
-        item.appendChild(statusBadge(h.from));
-        item.appendChild(el("span", {class:"h-arrow"}, ["→"]));
+        historyStatusCell.appendChild(statusBadge(h.from));
+        historyStatusCell.appendChild(el("span", {class:"h-arrow"}, ["→"]));
       }
-      item.appendChild(statusBadge(h.to));
+      historyStatusCell.appendChild(statusBadge(h.to));
+      item.appendChild(historyStatusCell);
+      var historyActions = el("div", {class:"history-actions"});
+      var historyEditButton = el("button", {type:"button", class:"history-edit-btn", title:"Sửa thời gian", "aria-label":"Sửa thời gian hoạt động"}, ["✎"]);
+      var historyConfirmButton = el("button", {type:"button", class:"history-confirm-btn", title:"Xác nhận chỉnh sửa", "aria-label":"Xác nhận chỉnh sửa thời gian hoạt động"}, ["✓"]);
+      var historyCancelButton = el("button", {type:"button", class:"history-cancel-btn", title:"Hủy sửa", "aria-label":"Hủy sửa thời gian hoạt động"}, ["×"]);
+      historyEditButton.addEventListener("click", function(){
+        item.classList.add("is-editing");
+        historyEditButton.style.display = "none";
+        historyConfirmButton.style.display = "inline-flex";
+        historyCancelButton.style.display = "inline-flex";
+        historyTimeInput.focus();
+        validateHistoryOrder(true, historyEdit);
+      });
+      historyConfirmButton.addEventListener("click", function(){
+        if(!validateHistoryOrder(true, historyEdit)) return;
+        var iso = historyEditIso(historyEdit);
+        if(!iso) return;
+        historyEdit.draftIso = iso;
+        historyTimeInput.value = toDatetimeLocalValue(iso);
+        historyTimeText.textContent = fmtDateTime(iso);
+        item.classList.remove("is-editing");
+        historyEditButton.style.display = "inline-flex";
+        historyConfirmButton.style.display = "none";
+        historyCancelButton.style.display = "none";
+      });
+      historyCancelButton.addEventListener("click", function(){
+        historyTimeInput.value = toDatetimeLocalValue(historyEdit.draftIso);
+        historyTimeText.textContent = fmtDateTime(historyEdit.draftIso);
+        item.classList.remove("is-editing");
+        historyEditButton.style.display = "inline-flex";
+        historyConfirmButton.style.display = "none";
+        historyCancelButton.style.display = "none";
+        validateHistoryOrder(false);
+      });
+      historyConfirmButton.style.display = "none";
+      historyCancelButton.style.display = "none";
+      historyActions.appendChild(historyEditButton);
+      historyActions.appendChild(historyConfirmButton);
+      historyActions.appendChild(historyCancelButton);
+      item.appendChild(historyActions);
       histList.appendChild(item);
     });
     histField.appendChild(histList);
+    function historyEditIso(edit){
+      var currentInputValue = edit.input.value;
+      var draftInputValue = toDatetimeLocalValue(edit.draftIso);
+      return currentInputValue === draftInputValue ? edit.draftIso : fromDatetimeLocalValue(currentInputValue);
+    }
+    function validateHistoryOrder(showError, activeEdit){
+      var orderedHistoryTimes = task.history.map(function(history){
+        var edit = historyEdits.find(function(item){ return item.history === history; });
+        return edit ? historyEditIso(edit) : history.at;
+      });
+      var valid = true;
+      historyEdits.forEach(function(edit){
+        edit.input.classList.remove("input-invalid");
+        edit.error.classList.remove("show");
+        edit.error.textContent = "";
+      });
+      orderedHistoryTimes.forEach(function(iso, index){
+        if(!iso){
+          valid = false;
+          var emptyEdit = historyEdits.find(function(item){ return item.history === task.history[index]; });
+          if(emptyEdit){
+            emptyEdit.input.classList.add("input-invalid");
+            emptyEdit.error.textContent = "Vui lòng nhập thời gian.";
+            if(showError && emptyEdit.item.classList.contains("is-editing")) emptyEdit.error.classList.add("show");
+          }
+          return;
+        }
+        if(index > 0 && new Date(iso).getTime() < new Date(orderedHistoryTimes[index - 1]).getTime()){
+          valid = false;
+          var currentEdit = historyEdits.find(function(item){ return item.history === task.history[index]; });
+          if(currentEdit){
+            currentEdit.input.classList.add("input-invalid");
+            currentEdit.error.textContent = "Thời gian hoạt động phải bằng hoặc sau hoạt động trước.";
+            if(showError && currentEdit.item.classList.contains("is-editing")) currentEdit.error.classList.add("show");
+          }
+        }
+      });
+      return valid;
+    }
+    historyEdits.forEach(function(edit){
+      edit.input.addEventListener("input", function(){ validateHistoryOrder(true, edit); });
+    });
+    validateHistoryOrder(false);
     colRight.appendChild(histField);
 
     cols.appendChild(colLeft);
@@ -2012,6 +2151,20 @@
     var rightBtns = el("div", {});
     rightBtns.appendChild(el("button", {class:"btn btn-outline", style:"margin-right:8px;", onclick: closeModal}, ["Đóng lại"]));
     rightBtns.appendChild(el("button", {class:"btn btn-primary", onclick: function(){
+      var editingHistory = historyEdits.filter(function(edit){ return edit.item.classList.contains("is-editing"); });
+      if(editingHistory.length){
+        editingHistory.forEach(function(edit){
+          edit.error.textContent = "Vui lòng nhấn ✓ để xác nhận hoạt động đang sửa trước khi lưu.";
+          edit.error.classList.add("show");
+        });
+        return;
+      }
+      if(!validateHistoryOrder(false)) return;
+      var historyTimes = [];
+      historyEdits.forEach(function(edit){
+        var iso = historyEditIso(edit);
+        historyTimes.push({history:edit.history, iso:iso});
+      });
       var reminderIso = fromDatetimeLocalValue(reminderInput.value);
       var originalLocal = task.reminderAt ? toDatetimeLocalValue(task.reminderAt) : "";
       var reminderChanged = reminderInput.value !== originalLocal;
@@ -2021,6 +2174,7 @@
         reminderInput.focus();
         return;
       }
+      updateTaskHistoryTimes(task.id, historyTimes);
       updateTaskFields(task.id, titleInput.value.trim() || task.title, descArea.value, reminderIso);
       var newStatus = selectedStatus;
       if(newStatus !== task.status){
