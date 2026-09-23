@@ -1424,7 +1424,7 @@
 
   function renderWorkView(){
     var range = getRange(state.workPeriod, state.workFrom, state.workTo, state.workAnchorDate);
-    var visible = getDisplayTasks(null).filter(function(t){ return t.status !== "trash"; });
+    var visible = getDisplayTasks(range).filter(function(t){ return t.status !== "trash"; });
     var activeWorkRange = range;
 
     var container = el("div");
@@ -1480,6 +1480,54 @@
         if(dateNode) card.insertBefore(meta, dateNode);
         else card.appendChild(meta);
       }
+    }
+    var workColumns = {};
+    function buildWorkTaskCard(t, colDef){
+      var card = el("div", {
+        class:"task-card", draggable:"true", "data-task-id":t.id,
+        "data-task-title":t.title.toLowerCase(), "data-virtual":t.isVirtual ? "true" : "false"
+      });
+      card.addEventListener("dragstart", function(e){
+        var dragTask = materializeDisplayTask(t);
+        card.setAttribute("data-task-id", dragTask.id);
+        card.setAttribute("data-virtual", "false");
+        e.dataTransfer.setData("text/plain", dragTask.id);
+        setTimeout(function(){ card.classList.add("dragging"); }, 0);
+      });
+      card.addEventListener("dragend", function(){ card.classList.remove("dragging"); });
+      card.addEventListener("click", function(){ openTaskDetail(t.id); });
+      card.appendChild(el("div", {class:"t-title"}, [t.title]));
+      var pct = PROGRESS_MAP[t.status] || 0;
+      card.appendChild(progressBar(pct, colDef.color));
+      var metaBottom = el("div", {style:"font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;justify-content:space-between;gap:6px;"});
+      metaBottom.appendChild(el("span", {}, [fmtDate(t.createdAt)]));
+      if(t.reminderAt){
+        var reminderPast = new Date(t.reminderAt).getTime() <= Date.now();
+        metaBottom.appendChild(el("span", {style:"color:"+(reminderPast?"#ef4444":"#e0378f")+";font-weight:600;"}, ["Nhắc: "+fmtDateTime(t.reminderAt)]));
+      }
+      card.appendChild(metaBottom);
+      var recurrenceText = recurrenceLabel(t);
+      if(recurrenceText) card.appendChild(el("div", {class:"task-recurrence"}, [recurrenceText]));
+      return card;
+    }
+    function syncWorkBoardTasks(){
+      var displayTasks = getDisplayTasks(activeWorkRange).filter(function(t){ return t.status !== "trash"; });
+      Object.keys(workColumns).forEach(function(statusKey){
+        var columnInfo = workColumns[statusKey];
+        var list = columnInfo.list;
+        var desiredTasks = displayTasks.filter(function(t){ return t.status === statusKey; });
+        var desiredIds = {};
+        desiredTasks.forEach(function(t){ desiredIds[t.id] = true; });
+        list.querySelectorAll('.task-card[data-virtual="true"]').forEach(function(card){
+          if(!desiredIds[card.getAttribute("data-task-id")]) card.remove();
+        });
+        var existingIds = {};
+        list.querySelectorAll(".task-card").forEach(function(card){ existingIds[card.getAttribute("data-task-id")] = true; });
+        desiredTasks.forEach(function(t){
+          if(!existingIds[t.id]) list.appendChild(buildWorkTaskCard(t, columnInfo.colDef));
+        });
+        applyColumnSearch(columnInfo.column, state.workSearchByStatus[statusKey]);
+      });
     }
     STATUSES.forEach(function(colDef, colIdx){
       var colTasks = visible.filter(function(t){ return t.status === colDef.key; });
@@ -1559,34 +1607,11 @@
       });
 
       colTasks.forEach(function(t){
-        var card = el("div", {
-          class:"task-card", draggable:"true", "data-task-id":t.id,
-          "data-task-title":t.title.toLowerCase()
-        });
-        card.addEventListener("dragstart", function(e){
-          var dragTask = materializeDisplayTask(t);
-          card.setAttribute("data-task-id", dragTask.id);
-          e.dataTransfer.setData("text/plain", dragTask.id);
-          setTimeout(function(){ card.classList.add("dragging"); }, 0);
-        });
-        card.addEventListener("dragend", function(){ card.classList.remove("dragging"); });
-        card.addEventListener("click", function(){ openTaskDetail(t.id); });
-        card.appendChild(el("div", {class:"t-title"}, [t.title]));
-        var pct = PROGRESS_MAP[t.status] || 0;
-        card.appendChild(progressBar(pct, colDef.color));
-        var metaBottom = el("div", {style:"font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;justify-content:space-between;gap:6px;"});
-        metaBottom.appendChild(el("span", {}, [fmtDate(t.createdAt)]));
-        if(t.reminderAt){
-          var reminderPast = new Date(t.reminderAt).getTime() <= Date.now();
-          metaBottom.appendChild(el("span", {style:"color:"+(reminderPast?"#ef4444":"#e0378f")+";font-weight:600;"}, ["Nhắc: "+fmtDateTime(t.reminderAt)]));
-        }
-        card.appendChild(metaBottom);
-        var recurrenceText = recurrenceLabel(t);
-        if(recurrenceText) card.appendChild(el("div", {class:"task-recurrence"}, [recurrenceText]));
-        list.appendChild(card);
+        list.appendChild(buildWorkTaskCard(t, colDef));
       });
 
       column.appendChild(list);
+      workColumns[colDef.key] = {column:column, list:list, colDef:colDef};
       applyColumnSearch(column, state.workSearchByStatus[colDef.key]);
 
       board.appendChild(column);
@@ -1691,6 +1716,7 @@
           button.className = "period-quick-button" + (periodKeys[index] === period ? " active" : "");
         });
         syncToolbarRange("work", toolbar);
+        syncWorkBoardTasks();
         board.querySelectorAll(".column,.trash-column").forEach(function(column){
           var key = column.querySelector(".column-search");
           applyColumnSearch(column, key ? key.value : "");
@@ -1703,6 +1729,7 @@
           button.className = "period-quick-button" + (periodKeys[index] === state.workPeriod ? " active" : "");
         });
         syncToolbarRange("work", toolbar);
+        syncWorkBoardTasks();
         board.querySelectorAll(".column,.trash-column").forEach(function(column){
           var key = column.querySelector(".column-search");
           applyColumnSearch(column, key ? key.value : "");
@@ -1710,6 +1737,7 @@
       },
       refreshRange:function(){
         activeWorkRange = getRange(state.workPeriod, state.workFrom, state.workTo, state.workAnchorDate);
+        syncWorkBoardTasks();
         board.querySelectorAll(".column,.trash-column").forEach(function(column){
           var key = column.querySelector(".column-search");
           applyColumnSearch(column, key ? key.value : "");
