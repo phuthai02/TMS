@@ -268,47 +268,50 @@
 </style>
 <style id="modern-theme">
   :root{
-    --pink:#c62f63;
-    --pink-dark:#a51e50;
-    --pink-soft:#fcf1f5;
-    --bg:#f5f7fb;
+    --pink:#bc285b;
+    --pink-dark:#991b4b;
+    --pink-soft:#fff0f5;
+    --bg:#f6f8fb;
     --card:#ffffff;
-    --border:#e4e9f0;
-    --border-strong:#cbd4e0;
-    --text:#182337;
-    --text-dim:#617087;
-    --muted:#8b98aa;
-    --shadow:0 12px 32px rgba(20,36,61,.06);
-    --shadow-sm:0 2px 8px rgba(20,36,61,.05);
+    --border:#e5eaf1;
+    --border-strong:#cdd6e2;
+    --text:#172238;
+    --text-dim:#66758b;
+    --muted:#8b9aaf;
+    --shadow:0 18px 40px rgba(18,34,56,.07);
+    --shadow-sm:0 3px 12px rgba(18,34,56,.04);
   }
   *,*::before,*::after{box-sizing:border-box;}
   html{background:var(--bg);}
   body{min-width:320px;background:var(--bg);color:var(--text);font-family:Inter,"Segoe UI",Arial,sans-serif!important;line-height:1.45;-webkit-font-smoothing:antialiased;}
   button,input,textarea,select{font:inherit;}
   button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[role="button"]:focus-visible{outline:3px solid rgba(198,47,99,.22);outline-offset:2px;}
-  header.topbar{height:68px;padding:0 clamp(18px,2.4vw,36px);background:#fff;color:var(--text);border-bottom:1px solid var(--border);box-shadow:none;gap:12px;}
-  header.topbar h1{font-size:16px;font-weight:750;letter-spacing:-.025em;line-height:1.25;}
-  .brand-mark{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:11px;background:var(--pink);color:#fff;font-size:19px;font-weight:800;box-shadow:0 4px 12px rgba(198,47,99,.18);}
+  header.topbar{height:72px;padding:0 clamp(18px,2.4vw,36px);background:#fff;color:var(--text);border-bottom:1px solid var(--border);box-shadow:none;gap:13px;}
+  header.topbar h1{font-size:16px;font-weight:760;letter-spacing:-.03em;line-height:1.25;}
+  .brand-mark{display:grid;place-items:center;width:38px;height:38px;flex:0 0 38px;border-radius:12px;background:linear-gradient(145deg,#d73970,#a91f52);color:#fff;font-size:20px;font-weight:800;box-shadow:0 5px 12px rgba(188,40,91,.18);}
   .brand-copy{display:flex;flex-direction:column;gap:2px;min-width:0;}
   .brand-copy span{font-size:11px;color:var(--muted);font-weight:550;}
-  .storage-note{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--border);border-radius:999px;background:#fbfcfe;color:var(--text-dim);font-size:11px;font-weight:600;white-space:nowrap;}
+  .storage-note{margin-left:auto;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:999px;background:#f9fbfd;color:var(--text-dim);font-size:11px;font-weight:600;white-space:nowrap;}
   .storage-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#2ab575;}
-  .app-body{min-height:calc(100vh - 68px);}
-  .sidebar{width:88px;flex:0 0 88px;min-height:calc(100vh - 68px);padding:20px 10px;background:#fff;border-right:1px solid var(--border);gap:8px;}
-  .side-item{width:100%;padding:11px 5px 10px;border-radius:10px;color:var(--text-dim);gap:6px;transition:background .15s,color .15s;}
-  .side-item svg{width:20px;height:20px;}
-  .side-item span{font-size:11px;font-weight:650;}
-  .side-item:hover{background:#f9fafb;color:var(--text);}
-  .side-item.active{background:var(--pink-soft);color:var(--pink-dark);box-shadow:inset 3px 0 0 var(--pink);}
-  main{padding:28px clamp(16px,2.6vw,40px);}
-  .view-heading{display:flex;align-items:flex-end;justify-content:space-between;margin:0 0 18px;}
-  .view-heading h2{margin:0;color:var(--text);font-size:23px;font-weight:760;letter-spacing:-.035em;line-height:1.2;}
+  .app-body{min-height:calc(100vh - 72px);}
+  .sidebar{position:sticky;top:72px;align-self:flex-start;width:210px;flex:0 0 210px;height:calc(100dvh - 72px);min-height:460px;padding:30px 12px 16px;background:#142033;border-right:1px solid #202e44;gap:4px;align-items:stretch;}
+  .sidebar-label{padding:0 13px 13px;color:#91a1b8;font-size:10px;font-weight:750;letter-spacing:.11em;white-space:nowrap;}
+  .side-item{width:100%;min-height:43px;flex-direction:row;justify-content:flex-start;padding:10px 13px;border-radius:9px;color:#aebbd0;gap:12px;transition:background .15s,color .15s;}
+  .side-item svg{width:19px;height:19px;flex:0 0 19px;}
+  .side-item span{font-size:12.5px;font-weight:650;text-align:left;}
+  .side-item:hover{background:#202e44;color:#fff;}
+  .side-item.active{background:#ffffff14;color:#fff;box-shadow:inset 3px 0 0 #e45184;}
+  .sidebar-tip{display:flex;align-items:flex-start;gap:9px;margin-top:auto;padding:13px 12px;border:1px solid #ffffff1b;border-radius:10px;background:#ffffff0a;color:#9eafc6;font-size:10.5px;line-height:1.45;}
+  .sidebar-tip-icon{display:grid;place-items:center;flex:0 0 18px;width:18px;height:18px;border-radius:6px;background:#ffffff14;color:#f59abc;font-size:11px;}
+  main{padding:30px clamp(20px,2.8vw,44px) 46px;}
+  .view-heading{display:flex;align-items:flex-end;justify-content:space-between;margin:0 0 20px;}
+  .view-heading h2{margin:0;color:var(--text);font-size:26px;font-weight:780;letter-spacing:-.04em;line-height:1.2;}
   .view-heading p{margin:6px 0 0;color:var(--text-dim);font-size:12.5px;line-height:1.5;}
 
-  .toolbar{min-height:64px;margin-bottom:20px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);gap:8px;}
+  .toolbar{min-height:66px;margin-bottom:20px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow-sm);gap:8px;}
   .toolbar>.period-quick-button{min-height:36px;padding:8px 12px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text-dim);font-size:12px;font-weight:650;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;}
   .toolbar>.period-quick-button:hover{background:#f2f5f9;color:var(--text);}
-  .toolbar>.period-quick-button.active{background:var(--pink-soft);border-color:#f5dce6;color:var(--pink-dark);box-shadow:none;}
+  .toolbar>.period-quick-button.active{background:var(--pink-soft);border-color:#f4d4e1;color:var(--pink-dark);box-shadow:none;}
   .toolbar>.period-arrow{width:36px;height:36px;padding:0;border:1px solid var(--border);border-radius:9px;background:#fff;color:#344054;font-size:19px;font-weight:400;line-height:1;cursor:pointer;}
   .toolbar>.period-arrow:hover{background:#f6f8fb;border-color:var(--border-strong);}
   .period-range{display:flex;align-items:center;gap:8px;padding:5px 8px;flex:0 0 auto;white-space:nowrap;border:1px solid var(--border);border-radius:10px;background:#f8fafc;}
@@ -325,32 +328,33 @@
   .btn-danger:hover{background:#fff5f7;}
 
   .board{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;align-items:stretch;overflow:visible;padding:1px 1px 8px;}
-  .column,.trash-column{min-width:0;max-width:none;height:clamp(420px,calc(100dvh - 250px),760px);min-height:320px;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-sm);}
-  .column{background:var(--card);border:1px solid var(--border);border-top:3px solid #98a2b3;}
-  .column-head{min-height:52px;padding:13px 14px;border-bottom:1px solid var(--border);}
+  .column,.trash-column{min-width:0;max-width:none;height:clamp(420px,calc(100dvh - 280px),740px);min-height:320px;border-radius:13px;overflow:hidden;box-shadow:var(--shadow-sm);}
+  .column{background:#fff!important;border:1px solid var(--border);border-top:3px solid #98a2b3;}
+  .column-head{min-height:54px;padding:14px 15px;border-bottom:1px solid var(--border);background:#fff!important;}
   .column-head h3{font-size:12.5px;font-weight:760;letter-spacing:-.015em;}
   .count-badge{min-width:23px;height:23px;border-radius:999px;font-size:10.5px;}
   .column-search{width:calc(100% - 28px);margin:10px 14px 6px;padding:7px 2px;border-bottom:1px solid var(--border-strong);font-size:12px;}
   .column-search:focus,.column-search:focus-visible{outline:none!important;box-shadow:none!important;border-top:0;border-left:0;border-right:0;border-bottom-color:var(--search-color,var(--pink));}
   .column-search::placeholder{color:var(--muted);}
-  .card-list{padding:10px 11px;min-height:70px;overflow-y:auto;overflow-x:hidden;background:#fbfcff;}
+  .card-list{padding:11px;min-height:70px;overflow-y:auto;overflow-x:hidden;background:#f9fbfe;}
   .column .card-list:empty::after{content:"Chưa có công việc";display:block;padding:30px 8px;color:var(--muted);font-size:11.5px;text-align:center;}
   .card-list.drag-over{background:#fff4f7;outline:2px dashed var(--pink);outline-offset:-6px;}
-  .task-card{margin-bottom:9px;padding:12px;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(20,36,61,.025);transition:border-color .15s,box-shadow .15s,transform .15s;}
-  .task-card:hover{border-color:#d7bdcb;box-shadow:0 4px 12px rgba(20,36,61,.07);transform:translateY(-1px);}
-  .task-card .t-title{margin-bottom:9px;font-size:12.5px;font-weight:670;line-height:1.45;}
+  .task-card{margin-bottom:9px;padding:13px;border:1px solid #e1e7ef;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(20,36,61,.035);transition:border-color .15s,box-shadow .15s;}
+  .task-card:hover{border-color:#b8c7d8;box-shadow:0 6px 16px rgba(20,36,61,.07);}
+  .task-card .t-title{margin-bottom:11px;font-size:12.5px;font-weight:680;line-height:1.45;}
   .task-card .t-meta{font-size:11px;color:var(--text-dim);}
   .progress-track{height:5px;background:#f2f4f7;}
   .task-card .t-meta{justify-content:flex-end;min-height:34px;}
-  .task-recurrence{margin-top:5px;color:var(--pink-dark);font-size:10.5px;font-weight:650;line-height:1.35;}
+  .card-date-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px;color:var(--text-dim);font-size:11px;}
+  .task-recurrence{display:inline-flex;align-items:center;margin-top:9px;padding:4px 7px;border-radius:6px;background:var(--pink-soft);color:var(--pink-dark);font-size:10px;font-weight:650;line-height:1.35;}
   .progress-circle{--progress:0%;--progress-color:var(--pink);position:relative;display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:conic-gradient(var(--progress-color) var(--progress),#edf0f4 0);}
   .progress-circle::before{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff;}
   .progress-circle .progress-pct{position:relative;z-index:1;font-size:9px;font-weight:800;line-height:1;}
   .quick-add{padding:8px 12px 12px;}
   .quick-add input{padding:9px 10px;border:1px dashed var(--border-strong);border-radius:8px;background:#fafbfc;font-size:12px;}
   .quick-add input:focus{border-color:var(--pink);background:#fff;}
-  .trash-column{background:#fff;border:1px dashed #e2c5d0;}
-  .trash-column .column-head{background:#fff8fa!important;}
+  .trash-column{background:#fff;border:1px dashed #e3becb;}
+  .trash-column .column-head{background:#fff!important;}
   .trash-column .card-list.drag-over{background:#fff0f4;outline-color:#d6336c;}
   .trash-empty-hint{padding:22px 12px;font-size:12px;color:var(--muted);}
   .trash-clear{margin:8px 12px 12px;}
@@ -384,17 +388,36 @@
   .history-item{font-size:12px;}
   .badge{padding:3px 9px;font-size:10.5px;line-height:1.2;}
 
+  .report-insight{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:16px;padding:20px 24px;border:1px solid #263c56;border-radius:14px;background:linear-gradient(115deg,#192b43,#233c57);color:#fff;box-shadow:0 10px 24px rgba(25,43,67,.11);}
+  .insight-eyebrow{color:#bbcbdb;font-size:10px;font-weight:780;letter-spacing:.11em;}
+  .insight-title{margin-top:5px;font-size:21px;font-weight:760;letter-spacing:-.035em;line-height:1.25;}
+  .insight-copy p{margin:5px 0 0;color:#b7c8d9;font-size:11.5px;}
+  .insight-actions{display:flex;flex:0 0 220px;flex-direction:column;align-items:flex-end;gap:9px;}
+  .insight-progress{width:100%;height:7px;overflow:hidden;border-radius:999px;background:#ffffff26;}
+  .insight-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#f16699,#ffb7ce);}
+  .insight-link{padding:4px 0;border:0;background:none;color:#fff;font-size:11px;font-weight:700;cursor:pointer;}
+  .insight-link:hover{text-decoration:underline;}
   .report-summary{gap:14px;margin-bottom:16px;}
-  .report-summary .stat-card{height:124px;padding:17px 18px;border:1px solid var(--border);border-top-width:3px;box-shadow:var(--shadow-sm);}
-  .stat-card{border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-sm);}
-  .stat-card .num{font-size:25px;font-weight:800;letter-spacing:-.03em;}
-  .stat-card .lbl{font-size:12px;}
+  .report-summary .stat-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;height:134px;padding:17px 18px;border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow-sm);text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+  .report-summary .stat-card:hover{border-color:#cbd5e2;box-shadow:0 10px 22px rgba(20,36,61,.08);}
+  .report-summary .stat-card::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 4px 4px 0;background:var(--stat-color);}
+  .stat-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .stat-card .num{color:var(--text);font-size:28px;font-weight:800;letter-spacing:-.04em;line-height:1;}
+  .stat-card .lbl{color:var(--text-dim);font-size:11.5px;font-weight:680;}
+  .stat-card-arrow{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:#f4f6f9;color:var(--muted);font-size:13px;}
+  .report-summary .stat-card:hover .stat-card-arrow{background:var(--pink-soft);color:var(--pink-dark);}
   .report-top-grid{gap:16px;margin-bottom:20px;}
-  .report-top-grid .panel{height:290px;}
+  .report-top-grid .panel{height:350px;}
+  .status-chart{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
+  .status-chart-legend{display:flex;flex-direction:column;gap:6px;}
+  .status-legend-row{display:flex;align-items:center;gap:7px;font-size:11px;}
+  .status-legend-dot{display:inline-block;flex:0 0 8px;width:8px;height:8px;border-radius:50%;}
+  .status-legend-label{min-width:105px;color:var(--text);}
+  .status-legend-count{color:var(--text-dim);font-weight:700;}
   .report-bottom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;margin-bottom:20px;}
   .report-bottom-panel{height:300px;margin-bottom:0;display:flex;flex-direction:column;overflow:hidden;}
   .report-bottom-panel .report-table-scroll{flex:1;min-height:0;overflow:auto;}
-  .panel{padding:18px 20px;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm);}
+  .panel{padding:19px 21px;border:1px solid var(--border);border-radius:13px;box-shadow:var(--shadow-sm);}
   .panel h3{margin-bottom:14px;font-size:14px;font-weight:750;}
   .report-todo-list{padding-right:2px;}
   table{font-size:12.5px;}
@@ -405,6 +428,8 @@
   .report-top-grid table,.report-bottom-grid table{border-collapse:separate;border-spacing:0;}
   .clickable-table tbody tr{transition:background .12s;}
   .clickable-table tbody tr:hover{background:#fff8fa;}
+  .clickable-table tr[role="button"]{cursor:pointer;}
+  .clickable-table tr[role="button"]:focus-visible{outline:2px solid var(--pink);outline-offset:-2px;}
   .empty-hint{padding:24px 10px;color:var(--muted);font-size:12.5px;}
   .quick-reminder-row{gap:6px;}
   .quick-reminder-btn{padding:6px 9px;border:1px solid var(--border-strong);font-size:11px;}
@@ -414,28 +439,31 @@
 
   @media (max-width:1550px){
     .board{grid-template-columns:repeat(3,minmax(0,1fr));}
-    .column,.trash-column{height:390px;}
+    .column,.trash-column{height:410px;}
   }
   @media (max-width:1100px){
     .toolbar{align-items:flex-start;}
     .toolbar>.period-range{max-width:100%;}
     .toolbar>.btn-primary{margin-left:auto;}
-    .report-top-grid .panel{height:300px;}
+    .report-top-grid .panel{height:350px;}
   }
   @media (max-width:980px){
     .board{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   @media (max-width:860px){
     .app-body{display:block;min-height:0;}
-    .sidebar{width:100%;height:64px;min-height:0;flex-direction:row;justify-content:center;padding:8px 12px;border-right:0;border-bottom:1px solid var(--border);}
-    .side-item{width:112px;height:48px;flex-direction:row;justify-content:center;padding:7px 10px;gap:8px;}
-    main{padding:18px 16px 28px;}
+    .sidebar{position:static;width:100%;height:62px;min-height:0;flex-direction:row;justify-content:center;padding:7px 12px;border-right:0;border-bottom:1px solid var(--border);background:#fff;}
+    .sidebar-label,.sidebar-tip{display:none;}
+    .side-item{width:128px;height:46px;flex-direction:row;justify-content:center;padding:7px 10px;gap:8px;color:var(--text-dim);}
+    .side-item:hover{background:#f6f8fb;color:var(--text);}
+    .side-item.active{background:var(--pink-soft);color:var(--pink-dark);box-shadow:inset 3px 0 0 var(--pink);}
+    main{padding:20px 16px 30px;}
     .board{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .column,.trash-column{height:380px;}
+    .column,.trash-column{height:390px;}
     .report-summary{grid-template-columns:repeat(2,minmax(0,1fr));}
     .report-top-grid{grid-template-columns:1fr;}
     .report-top-grid .report-todo-panel{grid-column:auto;}
-    .report-top-grid .panel{height:300px;}
+    .report-top-grid .panel{height:320px;}
     .report-bottom-grid{grid-template-columns:1fr;}
   }
   @media (max-width:600px){
@@ -443,9 +471,9 @@
     header.topbar h1{font-size:14px;}
     .brand-mark{width:31px;height:31px;flex-basis:31px;font-size:17px;}
     .brand-copy span,.storage-note{display:none;}
-    .sidebar{height:58px;}
+    .sidebar{position:fixed;top:auto;bottom:0;left:0;right:0;z-index:80;height:calc(60px + env(safe-area-inset-bottom));padding:7px 12px calc(7px + env(safe-area-inset-bottom));border-top:1px solid var(--border);border-bottom:0;box-shadow:0 -8px 24px rgba(20,36,61,.06);}
     .side-item{height:44px;width:50%;max-width:170px;}
-    main{padding:14px 10px 24px;}
+    main{padding:14px 10px calc(88px + env(safe-area-inset-bottom));}
     .view-heading{margin-bottom:13px;}
     .view-heading h2{font-size:20px;}
     .view-heading p{font-size:11.5px;}
@@ -460,9 +488,12 @@
     .column,.trash-column{height:auto;min-height:250px;}
     .column .card-list,.trash-column .card-list{max-height:340px;min-height:90px;}
     .report-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
-    .report-summary .stat-card{height:auto;min-height:110px;padding:14px;}
+    .report-summary .stat-card{height:auto;min-height:118px;padding:14px;}
     .report-summary .stat-card .num{font-size:22px;}
-    .report-top-grid .panel{height:320px;padding:16px;}
+    .report-insight{flex-direction:column;align-items:stretch;gap:15px;padding:18px;}
+    .insight-title{font-size:19px;}
+    .insight-actions{flex:0 0 auto;align-items:flex-start;gap:7px;}
+    .report-top-grid .panel{height:340px;padding:16px;}
     .panel{padding:16px;}
     .modal-overlay{padding:10px;}
     .modal{max-height:92vh;border-radius:12px;}
@@ -493,13 +524,14 @@
   <div class="brand-mark" aria-hidden="true">✓</div>
   <div class="brand-copy">
     <h1>Quản lý công việc</h1>
-    <span>Không gian làm việc của bạn</span>
+    <span>Không gian cá nhân</span>
   </div>
   <span class="storage-note"><span class="storage-dot" aria-hidden="true"></span>Lưu trên trình duyệt này</span>
 </header>
 
 <div class="app-body">
-  <aside class="sidebar">
+  <aside class="sidebar" aria-label="Điều hướng chính">
+    <div class="sidebar-label">ĐIỀU HƯỚNG</div>
     <button id="tab-report" class="side-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
       <span>Báo cáo</span>
@@ -508,6 +540,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2.5"/><line x1="8" y1="9.5" x2="16" y2="9.5"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="16.5" x2="13" y2="16.5"/></svg>
       <span>Công việc</span>
     </button>
+    <div class="sidebar-tip">
+      <span class="sidebar-tip-icon" aria-hidden="true">✦</span>
+      <span>Mở một công việc để xem chi tiết hoặc đổi trạng thái.</span>
+    </div>
   </aside>
   <main id="app"></main>
 </div>
@@ -1276,12 +1312,12 @@
       return { label:s.label, color:s.color, value: sourceTasks.filter(function(t){ return t.status === s.key; }).length };
     });
     var total = data.reduce(function(sum,d){ return sum + d.value; }, 0);
-    var wrap = el("div", {style:"display:flex;align-items:center;gap:28px;flex-wrap:wrap;"});
+    var wrap = el("div", {class:"status-chart"});
     if(!total){
       wrap.appendChild(el("div", {class:"empty-hint"}, ["Chưa có công việc nào."]));
       return wrap;
     }
-    var size=168, radius=62, sw=24, c=size/2, circumference=2*Math.PI*radius, offset=0;
+    var size=134, radius=51, sw=18, c=size/2, circumference=2*Math.PI*radius, offset=0;
     var svg = svgEl("svg", {viewBox:"0 0 "+size+" "+size, width:size, height:size});
     data.forEach(function(d){
       if(!d.value) return;
@@ -1303,12 +1339,12 @@
     chartWrap.appendChild(centerLabel);
     wrap.appendChild(chartWrap);
 
-    var legend = el("div", {style:"display:flex;flex-direction:column;gap:9px;"});
+    var legend = el("div", {class:"status-chart-legend"});
     data.forEach(function(d){
-      var row = el("div", {style:"display:flex;align-items:center;gap:9px;font-size:13px;"});
-      row.appendChild(el("span", {style:"width:10px;height:10px;border-radius:50%;background:"+d.color+";display:inline-block;flex:0 0 auto;"}));
-      row.appendChild(el("span", {style:"color:var(--text);min-width:120px;"}, [d.label]));
-      row.appendChild(el("span", {style:"font-weight:700;color:var(--text-dim);"}, [String(d.value)]));
+      var row = el("div", {class:"status-legend-row"});
+      row.appendChild(el("span", {class:"status-legend-dot", style:"background:"+d.color+";"}));
+      row.appendChild(el("span", {class:"status-legend-label"}, [d.label]));
+      row.appendChild(el("span", {class:"status-legend-count"}, [String(d.value)]));
       legend.appendChild(row);
     });
     wrap.appendChild(legend);
@@ -1546,8 +1582,8 @@
 
     var container = el("div");
     container.appendChild(el("div", {class:"view-heading"}, [
-      el("div", {}, [el("h2", {}, ["Bảng công việc"]),
-        el("p", {}, ["Kéo công việc giữa các trạng thái hoặc mở thẻ để cập nhật."])])
+      el("div", {}, [el("h2", {}, ["Công việc"]),
+        el("p", {}, ["Theo dõi từng bước. Kéo thả hoặc mở thẻ để cập nhật trạng thái."])])
     ]));
 
     var toolbar = el("div", {class:"toolbar"});
@@ -1621,7 +1657,7 @@
       card.appendChild(el("div", {class:"t-title"}, [t.title]));
       var pct = PROGRESS_MAP[t.status] || 0;
       card.appendChild(progressBar(pct, colDef.color));
-      var metaBottom = el("div", {style:"font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;justify-content:space-between;gap:6px;"});
+      var metaBottom = el("div", {class:"card-date-row"});
       metaBottom.appendChild(el("span", {}, [fmtDate(occurrenceDateOf(t))]));
       if(t.reminderAt){
         var reminderPast = new Date(t.reminderAt).getTime() <= Date.now();
@@ -1881,13 +1917,26 @@
     app.appendChild(container);
   }
 
+  function taskRowAttrs(taskId){
+    return {
+      role:"button", tabindex:"0",
+      onclick:function(){ openTaskDetail(taskId); },
+      onkeydown:function(e){
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          openTaskDetail(taskId);
+        }
+      }
+    };
+  }
+
   function renderReportView(existingContainer){
     var isRefresh = !!existingContainer;
     var container = existingContainer || el("div", {class:"report-view"});
     if(!existingContainer){
       container.appendChild(el("div", {class:"view-heading"}, [
-        el("div", {}, [el("h2", {}, ["Tổng quan"]),
-          el("p", {}, ["Theo dõi tiến độ và công việc trong khoảng thời gian bạn chọn."])])
+        el("div", {}, [el("h2", {}, ["Báo cáo"]),
+          el("p", {}, ["Bức tranh công việc rõ ràng trong khoảng thời gian bạn chọn."])])
       ]));
     }
     var toolbar = container.querySelector(".toolbar");
@@ -1928,6 +1977,7 @@
       });
       if(doneAt && inRange(doneAt, range)){
         durationRows.push({
+          taskId: t.id,
           title: t.title,
           start: firstInProgressAt,
           end: doneAt,
@@ -1955,6 +2005,32 @@
       return t.status !== "trash" && t.reminderAt && inRange(t.reminderAt, range);
     }).sort(function(a,b){ return new Date(a.reminderAt) - new Date(b.reminderAt); });
 
+    var doneCount = currentSummaryTasks.filter(function(t){ return t.status === "done"; }).length;
+    var completionRate = currentSummaryTasks.length
+      ? Math.round(doneCount / currentSummaryTasks.length * 100) : 0;
+    var insight = el("div", {class:"report-insight"});
+    insight.appendChild(el("div", {class:"insight-copy"}, [
+      el("span", {class:"insight-eyebrow"}, ["TIẾN ĐỘ KỲ NÀY"]),
+      el("div", {class:"insight-title"}, [
+        currentSummaryTasks.length ? completionRate + "% đã hoàn thành" : "Sẵn sàng bắt đầu"
+      ]),
+      el("p", {}, [currentSummaryTasks.length
+        ? doneCount + "/" + currentSummaryTasks.length + " công việc hoàn thành · " + reminderRows.length + " lịch nhắc"
+        : "Chưa có công việc trong kỳ. Hãy chọn kỳ khác hoặc thêm công việc mới."])
+    ]));
+    var insightActions = el("div", {class:"insight-actions"});
+    insightActions.appendChild(el("div", {class:"insight-progress", role:"progressbar",
+      "aria-label":"Tỷ lệ hoàn thành công việc", "aria-valuenow":String(completionRate),
+      "aria-valuemin":"0", "aria-valuemax":"100"}, [
+      el("span", {style:"width:"+completionRate+"%;"})
+    ]));
+    insightActions.appendChild(el("button", {class:"insight-link", type:"button", onclick:function(){
+      state.view = "work";
+      render();
+    }}, ["Mở bảng công việc", " →"]));
+    insight.appendChild(insightActions);
+    reportContent.appendChild(insight);
+
     // các thẻ tóm tắt theo trạng thái
     var summaryRow = el("div", {class:"report-summary"});
     [
@@ -1970,12 +2046,15 @@
         ? previousSummaryTasks.filter(function(t){ return t.status === item.status; })
         : previousSummaryTasks;
       var comparison = summaryComparison(tasks.length, previousTasks.length, !!previousRange[0]);
-      summaryRow.appendChild(el("div", {
-        class:"stat-card clickable fade-in", style:"animation-delay:"+(index*0.04)+"s;border-top:3px solid "+item.color+";",
+      summaryRow.appendChild(el("button", {
+        type:"button", class:"stat-card clickable fade-in", style:"--stat-color:"+item.color+";",
         onclick:function(){ renderTaskListModal(item.label, tasks); }
       }, [
-        el("div", {class:"num", style:"color:"+item.color+";"}, [String(tasks.length)]),
-        el("div", {class:"lbl"}, [item.label]),
+        el("div", {class:"stat-card-head"}, [
+          el("span", {class:"lbl"}, [item.label]),
+          el("span", {class:"stat-card-arrow", "aria-hidden":"true"}, ["↗"])
+        ]),
+        el("div", {class:"num"}, [String(tasks.length)]),
         el("div", {class:"compare", style:"color:"+comparison.color+";"}, [comparison.text])
       ]));
     });
@@ -2005,7 +2084,7 @@
       ])]));
       var completedBody = el("tbody");
       durationRows.forEach(function(r){
-        completedBody.appendChild(el("tr", {}, [
+        completedBody.appendChild(el("tr", taskRowAttrs(r.taskId), [
           el("td", {style:"font-weight:600;color:var(--text);"}, [r.title]),
           el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [r.start ? fmtDateTime(r.start) : "—"]),
           el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDateTime(r.end)]),
@@ -2036,7 +2115,7 @@
       ])]));
       var todoBody = el("tbody");
       todoInRange.forEach(function(t){
-        todoBody.appendChild(el("tr", {style:"cursor:pointer;", onclick:function(){ openTaskDetail(t.id); }}, [
+        todoBody.appendChild(el("tr", taskRowAttrs(t.id), [
           el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]),
           el("td", {}, [statusBadge(t.status)]),
           el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))])
@@ -2062,7 +2141,7 @@
       ])]));
       var reminderBody = el("tbody");
       reminderRows.forEach(function(t){
-        var tr = el("tr", {style:"cursor:pointer;", onclick:function(){ openTaskDetail(t.id); }});
+        var tr = el("tr", taskRowAttrs(t.id));
         tr.appendChild(el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]));
         tr.appendChild(el("td", {}, [statusBadge(t.status)]));
         tr.appendChild(el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDateTime(t.reminderAt)]));
@@ -2487,8 +2566,12 @@
     app.innerHTML = "";
     state.workViewApi = null;
     state.reportViewApi = null;
-    document.getElementById("tab-work").className = "side-item" + (state.view === "work" ? " active" : "");
-    document.getElementById("tab-report").className = "side-item" + (state.view === "report" ? " active" : "");
+    var workTab = document.getElementById("tab-work");
+    var reportTab = document.getElementById("tab-report");
+    workTab.className = "side-item" + (state.view === "work" ? " active" : "");
+    reportTab.className = "side-item" + (state.view === "report" ? " active" : "");
+    workTab.setAttribute("aria-pressed", String(state.view === "work"));
+    reportTab.setAttribute("aria-pressed", String(state.view === "report"));
     if(state.view === "work") renderWorkView();
     else renderReportView();
 

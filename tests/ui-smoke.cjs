@@ -60,9 +60,12 @@ async function main() {
       });
       await send('Page.navigate', { url: targetUrl });
       await new Promise(resolve => setTimeout(resolve, 700));
-      const report = await evaluate(`({width:innerWidth,bodyWidth:document.body.scrollWidth,mainWidth:document.querySelector('main').getBoundingClientRect().width,toolbarWidth:document.querySelector('.toolbar').getBoundingClientRect().width})`);
+      const report = await evaluate(`({width:innerWidth,bodyWidth:document.body.scrollWidth,mainWidth:document.querySelector('main').getBoundingClientRect().width,toolbarWidth:document.querySelector('.toolbar').getBoundingClientRect().width,insight:!!document.querySelector('.report-insight'),statButtons:document.querySelectorAll('.report-summary button').length,navPosition:getComputedStyle(document.querySelector('.sidebar')).position})`);
       console.log(`report ${width}:`, report);
       assert.ok(report.bodyWidth <= report.width + 1, `report overflows horizontally at ${width}px`);
+      assert.equal(report.insight, true);
+      assert.equal(report.statButtons, 4);
+      if (width < 600) assert.equal(report.navPosition, 'fixed', 'mobile navigation stays accessible');
       const reportShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/report-${width}.png`, Buffer.from(reportShot.data, 'base64'));
       await evaluate(`document.getElementById('tab-work').click()`);
@@ -110,6 +113,41 @@ async function main() {
     await evaluate(`document.querySelector('.modal-detail .modal-footer .btn-primary').click()`);
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 1, 'lưu không đổi không tạo bản thật');
     console.log('virtual detail: read-only open/save OK');
+
+    await evaluate(`(() => {
+      const now=new Date();
+      const today=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12).toISOString();
+      const statuses=['todo','inprogress','pending','done','closed'];
+      const names=['Việc mới','Đang triển khai','Chờ duyệt','Đã hoàn tất','Đã đóng'];
+      const tasks=statuses.map((status,index)=>({
+        id:'rich-'+index,title:names[index],description:'',status,createdAt:today,
+        history:status==='done' ? [{at:today,from:null,to:'todo'},{at:today,from:'todo',to:'inprogress'},{at:today,from:'inprogress',to:'done'}]
+          :[{at:today,from:null,to:status}],
+        reminderAt:index===0 ? today : null,recurrenceId:null
+      }));
+      localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks));
+      localStorage.setItem('tqm_series_v1','{}');
+    })()`);
+    await send('Emulation.setDeviceMetricsOverride', {
+      width: 1440, height: 900, deviceScaleFactor: 1, mobile: false,
+    });
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 400));
+    assert.equal(await evaluate(`document.querySelectorAll('.status-legend-row').length`), 5);
+    assert.equal(await evaluate(`document.querySelectorAll('.report-top-grid .report-todo-list tbody tr').length`), 1);
+    const populatedShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/report-populated-1440.png`, Buffer.from(populatedShot.data, 'base64'));
+    await evaluate(`document.querySelector('.report-top-grid .report-todo-list tbody tr').click()`);
+    assert.equal(await evaluate(`document.querySelector('.modal-detail input[type="text"]').value`), 'Đã hoàn tất');
+    console.log('completed report row: detail opens OK');
+    await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
+    for (const width of [1440, 320]) {
+      await send('Emulation.setDeviceMetricsOverride', {
+        width, height: 900, deviceScaleFactor: 1, mobile: width < 600,
+      });
+      const chart = await evaluate(`(() => { const panel=document.querySelector('.report-top-grid .panel'); return {clientHeight:panel.clientHeight,scrollHeight:panel.scrollHeight}; })()`);
+      assert.ok(chart.scrollHeight <= chart.clientHeight + 1, `status chart clips at ${width}px`);
+    }
   } finally {
     socket.close();
   }
