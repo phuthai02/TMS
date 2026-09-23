@@ -1605,6 +1605,8 @@
         if(emptyHint) emptyHint.remove();
         trashList.appendChild(card);
         applyColumnSearch(trashColumn, state.workSearchByStatus.trash);
+        var clearTrashButton = trashColumn.querySelector(".trash-clear button");
+        if(clearTrashButton) clearTrashButton.removeAttribute("disabled");
         refreshColumnCounts();
       }
     });
@@ -1648,8 +1650,9 @@
     var clearBtnAttrs = {
       class:"btn btn-outline",
       onclick: function(){
-        if(!trashTasks.length) return;
-        showConfirm("Xóa vĩnh viễn " + trashTasks.length + " công việc trong thùng rác? Hành động này không thể hoàn tác.", {
+        var currentTrashTasks = state.tasks.filter(function(task){ return task.status === "trash"; });
+        if(!currentTrashTasks.length) return;
+        showConfirm("Xóa vĩnh viễn " + currentTrashTasks.length + " công việc trong thùng rác? Hành động này không thể hoàn tác.", {
           title: "Dọn thùng rác",
           okLabel: "Xóa vĩnh viễn",
           onOk: function(){
