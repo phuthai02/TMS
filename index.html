@@ -1017,12 +1017,30 @@
   }
   function promoteNextVirtualTask(task){
     if(!isRecurringTask(task)) return;
-    var currentTime = new Date(occurrenceDateOf(task)).getTime();
-    var next = getDisplayTasks(null).filter(function(candidate){
-      return candidate.isVirtual && candidate.recurrenceId === task.recurrenceId &&
-        new Date(candidate.occurrenceDate).getTime() > currentTime;
-    }).sort(function(a,b){ return new Date(a.occurrenceDate) - new Date(b.occurrenceDate); })[0];
-    if(next) materializeDisplayTask(next);
+    var nextDate = new Date(occurrenceDateOf(task));
+    var excludedDates = {};
+    state.tasks.forEach(function(candidate){
+      if(candidate.recurrenceId !== task.recurrenceId) return;
+      (candidate.recurrenceExcludedDates || []).forEach(function(key){ excludedDates[key] = true; });
+    });
+    for(var i = 0; i <= Object.keys(excludedDates).length; i++){
+      if(task.recurrenceRule === "daily") nextDate.setDate(nextDate.getDate() + 1);
+      else if(task.recurrenceRule === "weekly") nextDate.setDate(nextDate.getDate() + 7);
+      else if(task.recurrenceRule === "monthly") nextDate.setMonth(nextDate.getMonth() + 1);
+      else if(task.recurrenceRule === "yearly") nextDate.setFullYear(nextDate.getFullYear() + 1);
+      else return;
+      var key = dateKey(nextDate);
+      if(excludedDates[key]) continue;
+      if(state.tasks.some(function(candidate){
+        return candidate.recurrenceId === task.recurrenceId && dateKey(occurrenceDateOf(candidate)) === key;
+      })) return;
+      var next = getDisplayTasks([startOfDay(nextDate), endOfDay(nextDate)]).find(function(candidate){
+        return candidate.isVirtual && candidate.recurrenceId === task.recurrenceId &&
+          dateKey(candidate.occurrenceDate) === key;
+      });
+      if(next) materializeDisplayTask(next);
+      return;
+    }
   }
   function deleteTask(taskId){
     var task = materializeDisplayTask(getTaskById(taskId));
@@ -1055,6 +1073,7 @@
   function taskDeletedInRange(task, range){
     if(task.status !== "trash") return false;
     if(!range[0]) return true;
+    if(isRecurringTask(task)) return dateInRangeValue(new Date(occurrenceDateOf(task)), range);
     return task.history.some(function(h){ return h.to === "trash" && inRange(h.at, range); });
   }
 
