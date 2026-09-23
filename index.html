@@ -722,11 +722,9 @@
   function recurrenceDates(task, range){
     if(!isRecurringTask(task)) return [];
     var start = new Date(task.recurrenceStart || occurrenceDateOf(task));
-    var end = task.recurrenceEnd ? new Date(task.recurrenceEnd + "T23:59:59") : null;
     var hasRangeEnd = !!(range && range[1]);
     var rangeEnd = hasRangeEnd ? endOfDay(range[1]) : null;
-    var targetEnd = end || rangeEnd;
-    if(end && rangeEnd && rangeEnd.getTime() < end.getTime()) targetEnd = rangeEnd;
+    var targetEnd = rangeEnd;
     var dates = [];
     var cur = new Date(start);
     var guard = 0;
@@ -825,13 +823,17 @@
   }
   function normalizeRecurringTasks(){
     var groups = {};
+    var changed = false;
     state.tasks.forEach(function(task){
+      if(task.recurrenceId && task.recurrenceRule && task.recurrenceEnd){
+        task.recurrenceEnd = null;
+        changed = true;
+      }
       if(!task.recurrenceId || task.recurrenceRule) return;
       if(!groups[task.recurrenceId]) groups[task.recurrenceId] = [];
       groups[task.recurrenceId].push(task);
     });
     var removeIds = {};
-    var changed = false;
     Object.keys(groups).forEach(function(seriesId){
       var items = groups[seriesId].slice().sort(function(a,b){ return new Date(a.createdAt) - new Date(b.createdAt); });
       if(items.length < 2) return;
