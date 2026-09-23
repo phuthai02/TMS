@@ -1029,14 +1029,14 @@
     if(!task) return;
     var deletedOccurrence = dateKey(occurrenceDateOf(task));
     promoteNextVirtualTask(task);
-    var survivor = state.tasks.find(function(candidate){
-      return candidate.id !== task.id && candidate.recurrenceId === task.recurrenceId;
-    });
-    if(survivor && isRecurringTask(task)){
-      survivor.recurrenceExcludedDates = survivor.recurrenceExcludedDates || [];
-      if(survivor.recurrenceExcludedDates.indexOf(deletedOccurrence) === -1){
-        survivor.recurrenceExcludedDates.push(deletedOccurrence);
-      }
+    if(isRecurringTask(task)){
+      state.tasks.forEach(function(candidate){
+        if(candidate.id === task.id || candidate.recurrenceId !== task.recurrenceId) return;
+        candidate.recurrenceExcludedDates = candidate.recurrenceExcludedDates || [];
+        if(candidate.recurrenceExcludedDates.indexOf(deletedOccurrence) === -1){
+          candidate.recurrenceExcludedDates.push(deletedOccurrence);
+        }
+      });
     }
     state.tasks = state.tasks.filter(function(t){ return t.id !== task.id; });
     saveTasks();
