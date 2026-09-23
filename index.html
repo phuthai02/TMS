@@ -719,14 +719,18 @@
   }
   function occurrenceDateOf(task){ return task.occurrenceDate || task.createdAt; }
   function isRecurringTask(task){ return !!(task && task.recurrenceId && task.recurrenceRule); }
-  function recurrenceDates(task){
+  function recurrenceDates(task, range){
     if(!isRecurringTask(task)) return [];
     var start = new Date(task.recurrenceStart || occurrenceDateOf(task));
     var end = task.recurrenceEnd ? new Date(task.recurrenceEnd + "T23:59:59") : null;
+    var hasRangeEnd = !!(range && range[1]);
+    var rangeEnd = hasRangeEnd ? endOfDay(range[1]) : null;
+    var targetEnd = end || rangeEnd;
+    if(end && rangeEnd && rangeEnd.getTime() < end.getTime()) targetEnd = rangeEnd;
     var dates = [];
     var cur = new Date(start);
     var guard = 0;
-    while((!end || cur.getTime() <= end.getTime()) && guard < 365){
+    while((!targetEnd || cur.getTime() <= targetEnd.getTime()) && guard < (hasRangeEnd ? 10000 : 365)){
       dates.push(new Date(cur));
       guard++;
       if(task.recurrenceRule === "daily") cur.setDate(cur.getDate()+1);
@@ -791,7 +795,7 @@
       seriesTasks.forEach(function(task){
         (task.recurrenceExcludedDates || []).forEach(function(key){ excludedDates[key] = true; });
       });
-      recurrenceDates(template).forEach(function(date){
+      recurrenceDates(template, range).forEach(function(date){
         var key = dateKey(date);
         if(actualDates[key] || excludedDates[key] || !dateInRangeValue(date, range)) return;
         var iso = date.toISOString();
@@ -966,11 +970,16 @@
       .filter(function(key){ return key !== fromStatus && key !== "closed" && key !== "trash"; })
     return nextStatuses.length ? nextStatuses[0] : null;
   }
-  // đưa đúng phiên bản đang chọn vào thùng rác; mỗi ngày của lịch lặp là một task riêng
-  function moveTaskToTrash(taskId, onApplied){
+  // đưa đúng phiên bản đang chọn vào thùng rác; lịch lặp vẫn giữ bản kế tiếp như thao tác xóa một bản
+  function setTaskToTrash(taskId){
     var task = materializeDisplayTask(getTaskById(taskId));
-    if(!task){ if(onApplied) onApplied(); render(); return; }
-    if(!setStatus(task.id, "trash")) return;
+    if(!task || !canChangeStatus(task.status, "trash")) return false;
+    if(task.status === "trash") return true;
+    if(isRecurringTask(task)) promoteNextVirtualTask(task);
+    return setStatus(task.id, "trash");
+  }
+  function moveTaskToTrash(taskId, onApplied){
+    if(!setTaskToTrash(taskId)) return;
     if(onApplied) onApplied();
     render();
   }
@@ -1032,6 +1041,9 @@
     saveTasks();
   }
   function emptyTrash(){
+    state.tasks.filter(function(task){ return task.status === "trash"; }).forEach(function(task){
+      if(isRecurringTask(task)) promoteNextVirtualTask(task);
+    });
     state.tasks = state.tasks.filter(function(t){ return t.status !== "trash"; });
     saveTasks();
   }
@@ -1598,7 +1610,7 @@
       var id = e.dataTransfer.getData("text/plain");
       var movingTask = materializeDisplayTask(getTaskById(id));
       if(!movingTask) return;
-      if(!setStatus(movingTask.id, "trash")) return;
+      if(!setTaskToTrash(movingTask.id)) return;
       var card = board.querySelector('[data-task-id="' + movingTask.id + '"]');
       if(card){
         var emptyHint = trashList.querySelector(".trash-empty-hint");
