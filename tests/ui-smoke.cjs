@@ -82,6 +82,28 @@ async function main() {
       assert.ok(detail.left >= 0 && detail.right <= detail.width + 1, `detail modal outside viewport at ${width}px`);
       const detailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/detail-${width}.png`, Buffer.from(detailShot.data, 'base64'));
+      if (width <= 820) {
+        await evaluate(`document.querySelector('.detail-tabs button:nth-child(2)').click()`);
+        assert.equal(await evaluate(`document.querySelector('.detail-tabs button:nth-child(2)').getAttribute('aria-selected')`), 'true');
+        const activityShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+        fs.writeFileSync(`${outputDir}/detail-activity-${width}.png`, Buffer.from(activityShot.data, 'base64'));
+      }
+      if (width === 1440 || width === 390 || width === 320) {
+        await evaluate(`document.querySelector('.history-edit-btn').click()`);
+        const edit = await evaluate(`(() => { const item=document.querySelector('.history-item.is-editing'); const input=item.querySelector('.history-time-input'); return {inputWidth:input.getBoundingClientRect().width,itemWidth:item.clientWidth,scrollWidth:item.scrollWidth}; })()`);
+        assert.ok(edit.inputWidth >= 130, `history time input too narrow at ${width}px`);
+        assert.ok(edit.scrollWidth <= edit.itemWidth + 1, `history edit row overflows at ${width}px`);
+        const editShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+        fs.writeFileSync(`${outputDir}/detail-edit-${width}.png`, Buffer.from(editShot.data, 'base64'));
+        if (width === 390) {
+          await evaluate(`document.querySelector('.detail-tabs button:first-child').click()`);
+          await evaluate(`document.querySelector('.modal-detail .modal-footer .btn-primary').click()`);
+          assert.equal(await evaluate(`document.querySelector('.detail-tabs button:nth-child(2)').getAttribute('aria-selected')`), 'true', 'save redirects to unfinished history edit');
+          assert.equal(await evaluate(`document.querySelectorAll('.history-item.is-editing .history-row-error.show').length`), 1);
+        }
+        await evaluate(`document.querySelector('.history-cancel-btn').click()`);
+        assert.equal(await evaluate(`document.querySelectorAll('.history-row-error.show').length`), 0);
+      }
     }
     await send('Emulation.setDeviceMetricsOverride', {
       width: 390, height: 900, deviceScaleFactor: 1, mobile: true,
@@ -140,7 +162,51 @@ async function main() {
     await evaluate(`document.querySelector('.report-top-grid .report-todo-list tbody tr').click()`);
     assert.equal(await evaluate(`document.querySelector('.modal-detail input[type="text"]').value`), 'Đã hoàn tất');
     console.log('completed report row: detail opens OK');
+    const historyRows = await evaluate(`Array.from(document.querySelectorAll('.modal-detail .history-item')).map(item=>({scrollWidth:item.scrollWidth,clientWidth:item.clientWidth}))`);
+    assert.equal(historyRows.length, 3);
+    assert.ok(historyRows.every(row => row.scrollWidth <= row.clientWidth + 1), 'history badges stay within event cards');
+    await evaluate(`(() => {
+      const item=document.querySelectorAll('.modal-detail .history-item')[1];
+      item.querySelector('.history-edit-btn').click();
+      const input=item.querySelector('.history-time-input');
+      input.value=input.value.slice(0,-2)+'01';
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      item.querySelector('.history-confirm-btn').click();
+    })()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.history-item.is-editing').length`), 1, 'invalid time cannot be confirmed');
+    assert.equal(await evaluate(`document.querySelector('.history-item.is-editing .history-row-error.show').textContent.includes('trước hoạt động sau')`), true, 'validation appears below edited input');
+    const validationShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/detail-history-validation-1440.png`, Buffer.from(validationShot.data, 'base64'));
+    await evaluate(`document.querySelector('.history-item.is-editing .history-cancel-btn').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.history-row-error.show').length`), 0);
+    const storedBeforeDraft = await evaluate(`localStorage.getItem('tqm_tasks_v1')`);
+    await evaluate(`(() => {
+      const item=document.querySelector('.modal-detail .history-item');
+      item.querySelector('.history-edit-btn').click();
+      const input=item.querySelector('.history-time-input');
+      input.value=input.value.slice(0,-2)+'01';
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      item.querySelector('.history-confirm-btn').click();
+    })()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.history-item.is-draft').length`), 1);
+    assert.equal(await evaluate(`localStorage.getItem('tqm_tasks_v1')`), storedBeforeDraft, 'confirming an edit does not save before main save');
+    const draftRow = await evaluate(`(() => { const item=document.querySelector('.history-item.is-draft'); return {scrollWidth:item.scrollWidth,clientWidth:item.clientWidth}; })()`);
+    assert.ok(draftRow.scrollWidth <= draftRow.clientWidth + 1, 'unsaved label does not overflow event card');
+    const draftShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/detail-history-draft-1440.png`, Buffer.from(draftShot.data, 'base64'));
     await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
+    assert.equal(await evaluate(`localStorage.getItem('tqm_tasks_v1')`), storedBeforeDraft, 'closing modal discards draft');
+    await evaluate(`document.querySelector('.report-top-grid .report-todo-list tbody tr').click()`);
+    await evaluate(`(() => {
+      const item=document.querySelector('.modal-detail .history-item');
+      item.querySelector('.history-edit-btn').click();
+      const input=item.querySelector('.history-time-input');
+      input.value=input.value.slice(0,-2)+'01';
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+      item.querySelector('.history-confirm-btn').click();
+      document.querySelector('.modal-detail .modal-footer .btn-primary').click();
+    })()`);
+    assert.notEqual(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).find(task=>task.id==='rich-3').history[2].at`), JSON.parse(storedBeforeDraft).find(task => task.id === 'rich-3').history[2].at, 'main save persists confirmed time');
     for (const width of [1440, 320]) {
       await send('Emulation.setDeviceMetricsOverride', {
         width, height: 900, deviceScaleFactor: 1, mobile: width < 600,
