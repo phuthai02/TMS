@@ -144,6 +144,7 @@ async function main() {
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 1, 'mở bản ảo không lưu bản thật');
     assert.equal(await evaluate(`document.querySelectorAll('.modal-detail .recurrence-note').length`), 0);
     assert.equal(await evaluate(`document.querySelector('.modal-detail').textContent.includes('Bản ảo dùng quy tắc của chuỗi; mở bản ghi thật để chỉnh.')`), false);
+    assert.equal(await evaluate(`document.querySelector('.modal-detail').textContent.includes('Đổi lịch lặp sẽ áp dụng cho cả chuỗi. Các bản ghi đã chỉnh sửa vẫn được giữ.')`), false);
     assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-rule-select').disabled`), true, 'virtual occurrence cannot change repeat rule');
     await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.modal-confirm.has-extra,.modal-confirm .confirm-extra').length`), 1, 'recurring delete offers a series action');

@@ -2655,7 +2655,6 @@
     recurrenceSelect.value = task.recurrenceRule || "none";
     recurrenceSelect.disabled = !!task.isVirtual;
     recurrenceField.appendChild(recurrenceSelect);
-    if(!task.isVirtual && isRecurringTask(task)) recurrenceField.appendChild(el("p", {class:"field-hint"}, ["Đổi lịch lặp sẽ áp dụng cho cả chuỗi. Các bản ghi đã chỉnh sửa vẫn được giữ."]));
     scheduleRow.appendChild(recurrenceField);
     colLeft.appendChild(scheduleRow);
 
