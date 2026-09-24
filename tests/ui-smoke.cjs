@@ -315,19 +315,22 @@ async function main() {
           description:'Tổng hợp phản hồi, hoàn thiện nội dung và gửi bản cuối cho nhóm phê duyệt.',
           status:'done',createdAt:at(0),occurrenceDate:at(0),recurrenceId:null,
           history:[{at:at(0),from:null,to:'todo'},{at:at(0.5),from:'todo',to:'inprogress'},{at:at(1.5),from:'inprogress',to:'pending'},{at:at(2.5),from:'pending',to:'done'}],
-          reminderAt:at(20),reminderNotifiedAt:null
+          reminderAt:at(20),reminderNotifiedAt:at(20)
         }]));
         localStorage.setItem('tqm_series_v1','{}');
       })()`);
       await send('Page.navigate', { url: targetUrl });
       await new Promise(resolve => setTimeout(resolve, 350));
       assert.equal(await evaluate(`document.querySelector('.report-top-grid .report-todo-list .approval-timing strong').textContent`), '1 giờ');
+      assert.ok(await evaluate(`Array.from(document.querySelectorAll('.report-top-grid .report-todo-list th')).some(th=>th.textContent==='Tổng thực hiện')`));
+      assert.equal(await evaluate(`document.querySelector('.report-top-grid .report-todo-list tbody tr td:nth-child(4)').textContent`), '1 giờ');
       await evaluate(`document.getElementById('tab-work').click()`);
       const facts = await evaluate(`(() => { const card=document.querySelector('[data-task-id="metric-done"]'); return Array.from(card.querySelectorAll('.task-card-fact')).map(node=>[node.querySelector('.task-card-fact-label').textContent,node.querySelector('.task-card-fact-value').textContent]); })()`);
       assert.ok(facts.some(([label]) => label === 'Bắt đầu'));
       assert.ok(facts.some(([label]) => label === 'Kết thúc'));
-      assert.ok(facts.some(([label, value]) => label === 'Tổng xử lý' && value === '2 giờ'));
+      assert.ok(facts.some(([label, value]) => label === 'Tổng thực hiện' && value === '1 giờ'));
       assert.ok(facts.some(([label, value]) => label === 'Tổng chờ phê duyệt' && value === '1 giờ'));
+      assert.ok(!facts.some(([label]) => label === 'Tổng xử lý'));
       assert.ok(await evaluate(`!!document.querySelector('[data-task-id="metric-done"] .t-description')`));
       if (width === 320) await evaluate(`document.querySelector('[data-task-id="metric-done"]').scrollIntoView({block:'center'})`);
       const cardShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -370,8 +373,10 @@ async function main() {
       window.__qaTimingCard=card;
       return Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]));
     })()`);
-    assert.match(pendingBefore['Đang chờ phê duyệt'], /^2 phút \d+ giây$/);
-    assert.deepEqual(Object.keys(pendingBefore), ['Ngày thực hiện','Đang chờ phê duyệt']);
+    assert.equal(pendingBefore['Đang chờ phê duyệt'], '2 phút');
+    assert.equal(pendingBefore['Tổng thực hiện'], '3 phút');
+    assert.equal(pendingBefore['Tổng chờ phê duyệt'], '4 phút');
+    assert.deepEqual(Object.keys(pendingBefore), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng thực hiện','Tổng chờ phê duyệt']);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const pendingAfter = await evaluate(`(() => {
@@ -381,8 +386,10 @@ async function main() {
     })()`);
     assert.equal(pendingAfter.sameBoard, true, 'live timer does not rebuild board');
     assert.equal(pendingAfter.sameCard, true, 'live timer does not rebuild card');
-    assert.match(pendingAfter.facts['Đang chờ phê duyệt'], /^4 phút \d+ giây$/);
-    assert.deepEqual(Object.keys(pendingAfter.facts), ['Ngày thực hiện','Đang chờ phê duyệt']);
+    assert.equal(pendingAfter.facts['Đang chờ phê duyệt'], '4 phút');
+    assert.equal(pendingAfter.facts['Tổng thực hiện'], '3 phút');
+    assert.equal(pendingAfter.facts['Tổng chờ phê duyệt'], '6 phút');
+    assert.deepEqual(Object.keys(pendingAfter.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng thực hiện','Tổng chờ phê duyệt']);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; document.querySelector('[data-task-id="metric-pending"]').scrollIntoView({block:'center'}); })()`);
     const pendingShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/pending-realtime-320.png`, Buffer.from(pendingShot.data, 'base64'));
@@ -398,12 +405,14 @@ async function main() {
     assert.equal(resumed.live, 'true');
     assert.ok(resumed.labels.includes('Đang thực hiện'));
     assert.ok(!resumed.labels.includes('Đang chờ phê duyệt'));
-    assert.deepEqual(resumed.labels, ['Ngày thực hiện','Đang thực hiện']);
+    assert.deepEqual(resumed.labels, ['Ngày thực hiện','Đang thực hiện','Tổng thực hiện','Tổng chờ phê duyệt']);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const resumedAfter = await evaluate(`(() => Object.fromEntries(Array.from(document.querySelectorAll('[data-task-id="metric-pending"] .task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent])))()`);
-    assert.match(resumedAfter['Đang thực hiện'], /^2 phút \d+ giây$/);
-    assert.deepEqual(Object.keys(resumedAfter), ['Ngày thực hiện','Đang thực hiện']);
+    assert.equal(resumedAfter['Đang thực hiện'], '2 phút');
+    assert.equal(resumedAfter['Tổng thực hiện'], '5 phút');
+    assert.equal(resumedAfter['Tổng chờ phê duyệt'], '4 phút');
+    assert.deepEqual(Object.keys(resumedAfter), ['Ngày thực hiện','Đang thực hiện','Tổng thực hiện','Tổng chờ phê duyệt']);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
     const pendingAgain = await evaluate(`(() => {
       const transfer=new DataTransfer(); transfer.setData('text/plain','metric-pending');
@@ -414,12 +423,12 @@ async function main() {
     })()`);
     assert.equal(pendingAgain.sameBoard, true);
     assert.equal(pendingAgain.sameCard, true);
-    assert.deepEqual(Object.keys(pendingAgain.facts), ['Ngày thực hiện','Đang chờ phê duyệt']);
+    assert.deepEqual(Object.keys(pendingAgain.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng thực hiện','Tổng chờ phê duyệt']);
     assert.match(pendingAgain.facts['Đang chờ phê duyệt'], /^\d+ giây$/);
     await evaluate(`document.querySelector('[data-task-id="metric-pending"]').click()`);
     const detailApproval = await evaluate(`Array.from(document.querySelectorAll('.detail-approval .approval-timing-row strong')).map(node=>node.textContent)`);
     assert.match(detailApproval[0], /^\d+ giây$/);
-    assert.match(detailApproval[1], /^4 phút \d+ giây$/, 'detail retains total waiting across approval rounds');
+    assert.equal(detailApproval[1], '4 phút', 'detail retains total waiting across approval rounds');
 
     await evaluate(`(() => {
       const now=Date.now();
@@ -448,9 +457,9 @@ async function main() {
     })()`);
     assert.equal(approvalReport.count, '0');
     assert.equal(approvalReport.labels[0][0], 'Đang chờ');
-    assert.match(approvalReport.labels[0][1], /^11 giờ 59 phút \d+ giây$/);
+    assert.equal(approvalReport.labels[0][1], '11 giờ 59 phút');
     assert.equal(approvalReport.labels[1][0], 'Tổng chờ');
-    assert.match(approvalReport.labels[1][1], /^12 giờ 29 phút \d+ giây$/);
+    assert.equal(approvalReport.labels[1][1], '12 giờ 29 phút');
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+40000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const approvalReportAfter = await evaluate(`(() => {
@@ -462,8 +471,8 @@ async function main() {
     assert.equal(approvalReportAfter.sameCard, true, 'report card updates without rebuilding');
     assert.equal(approvalReportAfter.sameRow, true, 'report row updates without rebuilding');
     assert.equal(approvalReportAfter.count, '1', '12-hour threshold updates without refresh');
-    assert.match(approvalReportAfter.values[0], /^12 giờ 0 phút \d+ giây$/);
-    assert.match(approvalReportAfter.values[1], /^12 giờ 30 phút \d+ giây$/);
+    assert.equal(approvalReportAfter.values[0], '12 giờ');
+    assert.equal(approvalReportAfter.values[1], '12 giờ 30 phút');
     await evaluate(`document.querySelector('.report-bottom-grid .panel:first-child').scrollIntoView({block:'center'})`);
     const approvalReportShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/approval-report-320.png`, Buffer.from(approvalReportShot.data, 'base64'));
@@ -472,7 +481,7 @@ async function main() {
     assert.equal(await evaluate(`document.querySelector('.summary-list-modal .approval-timing-row strong').textContent`), approvalReportAfter.values[0]);
     await evaluate(`document.querySelector('.summary-list-modal tbody tr').click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.detail-approval .approval-timing-row').length`), 2);
-    assert.match(await evaluate(`document.querySelector('.detail-approval .approval-timing-row strong').textContent`), /^12 giờ 0 phút \d+ giây$/);
+    assert.equal(await evaluate(`document.querySelector('.detail-approval .approval-timing-row strong').textContent`), '12 giờ');
     const approvalDetailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/approval-detail-320.png`, Buffer.from(approvalDetailShot.data, 'base64'));
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);

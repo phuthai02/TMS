@@ -1159,21 +1159,12 @@
     var parts = [];
     if(days) parts.push(days+" ngày");
     if(hours) parts.push(hours+" giờ");
-    if(!days && mins) parts.push(mins+" phút");
+    if(mins) parts.push(mins+" phút");
     if(!parts.length) parts.push("dưới 1 phút");
     return parts.join(" ");
   }
   function liveDurationText(ms){
-    var seconds = Math.floor(Math.max(0, ms) / 1000);
-    var days = Math.floor(seconds / 86400); seconds %= 86400;
-    var hours = Math.floor(seconds / 3600); seconds %= 3600;
-    var minutes = Math.floor(seconds / 60); seconds %= 60;
-    var parts = [];
-    if(days) parts.push(days + " ngày");
-    if(hours) parts.push(hours + " giờ");
-    if(minutes || hours || days) parts.push(minutes + " phút");
-    parts.push(seconds + " giây");
-    return parts.join(" ");
+    return ms >= 60000 ? durationText(ms) : Math.floor(Math.max(0, ms) / 1000) + " giây";
   }
   function taskTimingSummary(task, nowMs){
     if(nowMs === undefined) nowMs = Date.now();
@@ -1181,9 +1172,11 @@
     var startAt = null;
     var completedAt = null;
     var deletedAt = null;
+    var inprogressMs = 0;
     var pendingMs = 0;
     var currentPendingMs = null;
     var currentInprogressMs = null;
+    var hasInprogress = false;
     var hasPending = false;
     history.forEach(function(event, index){
       var at = new Date(event.at).getTime();
@@ -1191,28 +1184,22 @@
       if(event.to === "inprogress" && !startAt) startAt = event.at;
       if(event.to === "done" || event.to === "closed") completedAt = event.at;
       if(event.to === "trash") deletedAt = event.at;
-      if(event.to !== "pending") return;
-      hasPending = true;
+      if(event.to !== "inprogress" && event.to !== "pending") return;
+      if(event.to === "inprogress") hasInprogress = true;
+      else hasPending = true;
       var isCurrentPending = task.status === "pending" && index === history.length - 1;
-      var nextAt = history[index + 1] ? new Date(history[index + 1].at).getTime() : (isCurrentPending ? nowMs : at);
+      var isCurrentInprogress = task.status === "inprogress" && index === history.length - 1;
+      var nextAt = history[index + 1] ? new Date(history[index + 1].at).getTime() : (isCurrentPending || isCurrentInprogress ? nowMs : at);
       if(Number.isFinite(nextAt)){
         var intervalMs = Math.max(0, nextAt - at);
-        pendingMs += intervalMs;
+        if(event.to === "pending") pendingMs += intervalMs;
+        else inprogressMs += intervalMs;
         if(isCurrentPending) currentPendingMs = intervalMs;
+        if(isCurrentInprogress) currentInprogressMs = intervalMs;
       }
     });
     var endAt = (task.status === "done" || task.status === "closed" || task.status === "trash") ? completedAt : null;
-    var processingMs = null;
-    if(startAt){
-      var stopAt = endAt ? new Date(endAt).getTime() : (task.status === "inprogress" || task.status === "pending" ? nowMs : null);
-      if(stopAt !== null && Number.isFinite(stopAt)) processingMs = Math.max(0, stopAt - new Date(startAt).getTime());
-    }
-    var latestEvent = history[history.length - 1];
-    if(task.status === "inprogress" && latestEvent && latestEvent.to === "inprogress"){
-      var latestInprogressAt = new Date(latestEvent.at).getTime();
-      if(Number.isFinite(latestInprogressAt)) currentInprogressMs = Math.max(0, nowMs - latestInprogressAt);
-    }
-    return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, processingMs:processingMs,
+    return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, inprogressMs:hasInprogress ? inprogressMs : null,
       currentInprogressMs:currentInprogressMs, currentPendingMs:currentPendingMs,
       pendingMs:hasPending ? pendingMs : null};
   }
@@ -1253,6 +1240,7 @@
       var values = {
         currentInprogress:timing.currentInprogressMs,
         currentPending:timing.currentPendingMs,
+        totalInprogress:timing.inprogressMs,
         totalPending:timing.pendingMs
       };
       container.querySelectorAll('[data-live-kind]').forEach(function(node){
@@ -1857,9 +1845,9 @@
       } else {
         if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
         if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
-        if(timing.processingMs !== null && timing.endAt) addFact("Tổng xử lý", durationText(timing.processingMs));
-        if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", durationText(timing.pendingMs));
       }
+      if(timing.inprogressMs !== null) addFact("Tổng thực hiện", task.status === "inprogress" ? liveDurationText(timing.inprogressMs) : durationText(timing.inprogressMs), task.status === "inprogress" ? "totalInprogress" : null);
+      if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", task.status === "pending" ? liveDurationText(timing.pendingMs) : durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
       if(isTrash && timing.deletedAt) addFact("Chuyển vào rác", fmtDateTime(timing.deletedAt));
       card.appendChild(facts);
       var recurrenceText = recurrenceLabel(task);
@@ -2186,9 +2174,7 @@
     var range = getRange(state.reportPeriod, state.reportFrom, state.reportTo, state.reportAnchorDate);
     var previousRange = getPreviousRange(state.reportPeriod, range);
 
-    // duration report: tasks whose "done" event at is within range.
-    // start = FIRST time it entered "inprogress" (khi bắt đầu làm), end = LAST time it entered "done"
-    // (khi hoàn thành sau cùng) — tránh việc kéo qua lại gần lúc hoàn thành làm sai lệch thời gian tính.
+    // Chỉ cộng các khoảng ở trạng thái Đang thực hiện; không cộng thời gian chờ phê duyệt.
     var durationRows = [];
     state.tasks.forEach(function(t){
       if(t.status !== "done") return; // chỉ tính việc ĐANG ở trạng thái Hoàn thành, không tính việc đã kéo ra khỏi đó
@@ -2199,13 +2185,14 @@
         if(h.to === "done") doneAt = h.at;
       });
       if(doneAt && inRange(doneAt, range)){
+        var timing = taskTimingSummary(t);
         durationRows.push({
           taskId: t.id,
           task: t,
           title: t.title,
           start: firstInProgressAt,
           end: doneAt,
-          durationMs: firstInProgressAt ? (new Date(doneAt) - new Date(firstInProgressAt)) : null
+          durationMs: timing.inprogressMs
         });
       }
     });
@@ -2314,7 +2301,7 @@
         el("th", {}, ["Tên việc"]),
         el("th", {}, ["Bắt đầu"]),
         el("th", {}, ["Hoàn thành"]),
-        el("th", {}, ["Thời gian xử lý"]),
+        el("th", {}, ["Tổng thực hiện"]),
         el("th", {}, ["Phê duyệt"])
       ])]));
       var completedBody = el("tbody");
