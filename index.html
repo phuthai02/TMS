@@ -1183,6 +1183,7 @@
     var deletedAt = null;
     var pendingMs = 0;
     var currentPendingMs = null;
+    var currentInprogressMs = null;
     var hasPending = false;
     history.forEach(function(event, index){
       var at = new Date(event.at).getTime();
@@ -1206,8 +1207,14 @@
       var stopAt = endAt ? new Date(endAt).getTime() : (task.status === "inprogress" || task.status === "pending" ? nowMs : null);
       if(stopAt !== null && Number.isFinite(stopAt)) processingMs = Math.max(0, stopAt - new Date(startAt).getTime());
     }
+    var latestEvent = history[history.length - 1];
+    if(task.status === "inprogress" && latestEvent && latestEvent.to === "inprogress"){
+      var latestInprogressAt = new Date(latestEvent.at).getTime();
+      if(Number.isFinite(latestInprogressAt)) currentInprogressMs = Math.max(0, nowMs - latestInprogressAt);
+    }
     return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, processingMs:processingMs,
-      currentPendingMs:currentPendingMs, pendingMs:hasPending ? pendingMs : null};
+      currentInprogressMs:currentInprogressMs, currentPendingMs:currentPendingMs,
+      pendingMs:hasPending ? pendingMs : null};
   }
   function approvalTimingView(task, className){
     var timing = taskTimingSummary(task);
@@ -1244,7 +1251,7 @@
       if(!task) return;
       var timing = taskTimingSummary(task, nowMs);
       var values = {
-        processing:timing.processingMs,
+        currentInprogress:timing.currentInprogressMs,
         currentPending:timing.currentPendingMs,
         totalPending:timing.pendingMs
       };
@@ -1843,14 +1850,16 @@
         ]));
       }
       addFact("Ngày thực hiện", fmtDate(occurrenceDateOf(task)));
-      if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
-      if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
-      if(timing.currentPendingMs !== null) addFact("Đang chờ phê duyệt", liveDurationText(timing.currentPendingMs), "currentPending");
-      if(timing.processingMs !== null){
-        var processingLabel = timing.endAt ? "Tổng xử lý" : (task.status === "pending" ? "Từ lúc bắt đầu" : "Đang xử lý");
-        addFact(processingLabel, liveTiming ? liveDurationText(timing.processingMs) : durationText(timing.processingMs), liveTiming ? "processing" : null);
+      if(task.status === "inprogress"){
+        if(timing.currentInprogressMs !== null) addFact("Đang thực hiện", liveDurationText(timing.currentInprogressMs), "currentInprogress");
+      } else if(task.status === "pending"){
+        if(timing.currentPendingMs !== null) addFact("Đang chờ phê duyệt", liveDurationText(timing.currentPendingMs), "currentPending");
+      } else {
+        if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
+        if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
+        if(timing.processingMs !== null && timing.endAt) addFact("Tổng xử lý", durationText(timing.processingMs));
+        if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", durationText(timing.pendingMs));
       }
-      if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", task.status === "pending" ? liveDurationText(timing.pendingMs) : durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
       if(isTrash && timing.deletedAt) addFact("Chuyển vào rác", fmtDateTime(timing.deletedAt));
       card.appendChild(facts);
       var recurrenceText = recurrenceLabel(task);

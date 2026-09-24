@@ -361,8 +361,7 @@ async function main() {
       return Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]));
     })()`);
     assert.match(pendingBefore['Đang chờ phê duyệt'], /^2 phút \d+ giây$/);
-    assert.match(pendingBefore['Tổng chờ phê duyệt'], /^4 phút \d+ giây$/);
-    assert.match(pendingBefore['Từ lúc bắt đầu'], /^8 phút \d+ giây$/);
+    assert.deepEqual(Object.keys(pendingBefore), ['Ngày thực hiện','Đang chờ phê duyệt']);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const pendingAfter = await evaluate(`(() => {
@@ -373,8 +372,7 @@ async function main() {
     assert.equal(pendingAfter.sameBoard, true, 'live timer does not rebuild board');
     assert.equal(pendingAfter.sameCard, true, 'live timer does not rebuild card');
     assert.match(pendingAfter.facts['Đang chờ phê duyệt'], /^4 phút \d+ giây$/);
-    assert.match(pendingAfter.facts['Tổng chờ phê duyệt'], /^6 phút \d+ giây$/);
-    assert.match(pendingAfter.facts['Từ lúc bắt đầu'], /^10 phút \d+ giây$/);
+    assert.deepEqual(Object.keys(pendingAfter.facts), ['Ngày thực hiện','Đang chờ phê duyệt']);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; document.querySelector('[data-task-id="metric-pending"]').scrollIntoView({block:'center'}); })()`);
     const pendingShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/pending-realtime-320.png`, Buffer.from(pendingShot.data, 'base64'));
@@ -388,14 +386,30 @@ async function main() {
     assert.equal(resumed.sameBoard, true);
     assert.equal(resumed.sameCard, true);
     assert.equal(resumed.live, 'true');
-    assert.ok(resumed.labels.includes('Đang xử lý'));
+    assert.ok(resumed.labels.includes('Đang thực hiện'));
     assert.ok(!resumed.labels.includes('Đang chờ phê duyệt'));
+    assert.deepEqual(resumed.labels, ['Ngày thực hiện','Đang thực hiện']);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const resumedAfter = await evaluate(`(() => Object.fromEntries(Array.from(document.querySelectorAll('[data-task-id="metric-pending"] .task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent])))()`);
-    assert.match(resumedAfter['Đang xử lý'], /^10 phút \d+ giây$/);
-    assert.equal(resumedAfter['Tổng chờ phê duyệt'], '4 phút');
+    assert.match(resumedAfter['Đang thực hiện'], /^2 phút \d+ giây$/);
+    assert.deepEqual(Object.keys(resumedAfter), ['Ngày thực hiện','Đang thực hiện']);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
+    const pendingAgain = await evaluate(`(() => {
+      const transfer=new DataTransfer(); transfer.setData('text/plain','metric-pending');
+      document.querySelectorAll('.column .card-list')[2].dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));
+      const card=document.querySelector('[data-task-id="metric-pending"]');
+      return {sameBoard:document.querySelector('.board')===window.__qaTimingBoard,sameCard:card===window.__qaTimingCard,
+        facts:Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]))};
+    })()`);
+    assert.equal(pendingAgain.sameBoard, true);
+    assert.equal(pendingAgain.sameCard, true);
+    assert.deepEqual(Object.keys(pendingAgain.facts), ['Ngày thực hiện','Đang chờ phê duyệt']);
+    assert.match(pendingAgain.facts['Đang chờ phê duyệt'], /^\d+ giây$/);
+    await evaluate(`document.querySelector('[data-task-id="metric-pending"]').click()`);
+    const detailApproval = await evaluate(`Array.from(document.querySelectorAll('.detail-approval .approval-timing-row strong')).map(node=>node.textContent)`);
+    assert.match(detailApproval[0], /^\d+ giây$/);
+    assert.match(detailApproval[1], /^4 phút \d+ giây$/, 'detail retains total waiting across approval rounds');
 
     await evaluate(`(() => {
       const now=Date.now();
