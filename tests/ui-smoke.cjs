@@ -65,6 +65,16 @@ async function main() {
       assert.ok(report.bodyWidth <= report.width + 1, `report overflows horizontally at ${width}px`);
       assert.equal(report.insight, true);
       assert.equal(report.statButtons, 5);
+      const defaultPeriod = await evaluate(`(() => {
+        const now=new Date();
+        const first=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-01';
+        const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+        const last=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+        const dates=Array.from(document.querySelectorAll('.period-range input')).map(input=>input.value);
+        return {monthSelected:document.querySelectorAll('.period-quick-button')[2].classList.contains('active'),dates,expected:[first,last]};
+      })()`);
+      assert.equal(defaultPeriod.monthSelected, true, 'report defaults to current month');
+      assert.deepEqual(defaultPeriod.dates, defaultPeriod.expected, 'report range spans current month');
       if (width < 600) assert.equal(report.navPosition, 'fixed', 'mobile navigation stays accessible');
       const reportShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/report-${width}.png`, Buffer.from(reportShot.data, 'base64'));
