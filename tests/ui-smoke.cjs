@@ -54,7 +54,7 @@ async function main() {
         ]));
       } catch (e) {}
     ` });
-    for (const width of [1440, 768, 390, 320]) {
+    for (const width of [1440, 1024, 768, 390, 320]) {
       await send('Emulation.setDeviceMetricsOverride', {
         width, height: 900, deviceScaleFactor: 1, mobile: width < 600,
       });
@@ -90,6 +90,8 @@ async function main() {
       const detail = await evaluate(`(() => { const modal=document.querySelector('.modal-detail'); const box=modal.getBoundingClientRect(); return {left:box.left,right:box.right,width:innerWidth,scrollWidth:modal.scrollWidth,clientWidth:modal.clientWidth}; })()`);
       console.log(`detail ${width}:`, detail);
       assert.ok(detail.left >= 0 && detail.right <= detail.width + 1, `detail modal outside viewport at ${width}px`);
+      if (width === 1440) assert.ok(detail.right - detail.left >= 1100, 'detail modal is wider on desktop');
+      if (width === 1024) assert.ok(detail.right - detail.left >= 980, 'detail modal uses available laptop width');
       const detailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/detail-${width}.png`, Buffer.from(detailShot.data, 'base64'));
       if (width <= 820) {
