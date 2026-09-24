@@ -1148,12 +1148,14 @@
     if(!parts.length) parts.push("dưới 1 phút");
     return parts.join(" ");
   }
-  function taskTimingSummary(task){
+  function taskTimingSummary(task, nowMs){
+    if(nowMs === undefined) nowMs = Date.now();
     var history = Array.isArray(task.history) ? task.history : [];
     var startAt = null;
     var completedAt = null;
     var deletedAt = null;
     var pendingMs = 0;
+    var currentPendingMs = null;
     var hasPending = false;
     history.forEach(function(event, index){
       var at = new Date(event.at).getTime();
@@ -1163,16 +1165,41 @@
       if(event.to === "trash") deletedAt = event.at;
       if(event.to !== "pending") return;
       hasPending = true;
-      var nextAt = history[index + 1] ? new Date(history[index + 1].at).getTime() : Date.now();
-      if(Number.isFinite(nextAt)) pendingMs += Math.max(0, nextAt - at);
+      var isCurrentPending = task.status === "pending" && index === history.length - 1;
+      var nextAt = history[index + 1] ? new Date(history[index + 1].at).getTime() : (isCurrentPending ? nowMs : at);
+      if(Number.isFinite(nextAt)){
+        var intervalMs = Math.max(0, nextAt - at);
+        pendingMs += intervalMs;
+        if(isCurrentPending) currentPendingMs = intervalMs;
+      }
     });
     var endAt = (task.status === "done" || task.status === "closed" || task.status === "trash") ? completedAt : null;
     var processingMs = null;
     if(startAt){
-      var stopAt = endAt ? new Date(endAt).getTime() : (task.status === "inprogress" || task.status === "pending" ? Date.now() : null);
+      var stopAt = endAt ? new Date(endAt).getTime() : (task.status === "inprogress" || task.status === "pending" ? nowMs : null);
       if(stopAt !== null && Number.isFinite(stopAt)) processingMs = Math.max(0, stopAt - new Date(startAt).getTime());
     }
-    return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, processingMs:processingMs, pendingMs:hasPending ? pendingMs : null};
+    return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, processingMs:processingMs,
+      currentPendingMs:currentPendingMs, pendingMs:hasPending ? pendingMs : null};
+  }
+  function updateLiveTaskCardTimes(){
+    var nowMs = Date.now();
+    document.querySelectorAll('.board .task-card[data-live-timing="true"]').forEach(function(card){
+      var task = card._liveTimingTask;
+      if(!task) return;
+      var timing = taskTimingSummary(task, nowMs);
+      var values = {
+        processing:timing.processingMs,
+        currentPending:timing.currentPendingMs,
+        totalPending:timing.pendingMs
+      };
+      card.querySelectorAll('[data-live-kind]').forEach(function(node){
+        var ms = values[node.getAttribute("data-live-kind")];
+        if(ms === null) return;
+        var value = durationText(ms);
+        if(node.textContent !== value){ node.textContent = value; node.title = value; }
+      });
+    });
   }
 
   // ---------- task ops ----------
@@ -1732,6 +1759,9 @@
     }
     function renderWorkCardContents(card, task, colDef, isTrash){
       card.replaceChildren();
+      var liveTiming = !isTrash && (task.status === "inprogress" || task.status === "pending");
+      card._liveTimingTask = liveTiming ? task : null;
+      card.setAttribute("data-live-timing", liveTiming ? "true" : "false");
       card.setAttribute("data-task-title", task.title.toLowerCase());
       card.setAttribute("aria-label", "Mở công việc " + task.title + (isTrash ? " trong thùng rác" : " ngày " + fmtDate(occurrenceDateOf(task))));
       card.appendChild(el("div", {class:"t-title", title:task.title}, [task.title]));
@@ -1740,17 +1770,23 @@
       if(!isTrash) card.appendChild(progressBar(PROGRESS_MAP[task.status] || 0, colDef.color));
       var timing = taskTimingSummary(task);
       var facts = el("div", {class:"task-card-facts"});
-      function addFact(label, value){
+      function addFact(label, value, liveKind){
+        var valueAttrs = {class:"task-card-fact-value", title:value};
+        if(liveKind) valueAttrs["data-live-kind"] = liveKind;
         facts.appendChild(el("div", {class:"task-card-fact"}, [
           el("span", {class:"task-card-fact-label"}, [label]),
-          el("strong", {class:"task-card-fact-value", title:value}, [value])
+          el("strong", valueAttrs, [value])
         ]));
       }
       addFact("Ngày thực hiện", fmtDate(occurrenceDateOf(task)));
       if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
       if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
-      if(timing.processingMs !== null) addFact(timing.endAt ? "Tổng xử lý" : "Đang xử lý", durationText(timing.processingMs));
-      if(timing.pendingMs !== null) addFact("Tổng chờ duyệt", durationText(timing.pendingMs));
+      if(timing.currentPendingMs !== null) addFact("Đang chờ phê duyệt", durationText(timing.currentPendingMs), "currentPending");
+      if(timing.processingMs !== null){
+        var processingLabel = timing.endAt ? "Tổng xử lý" : (task.status === "pending" ? "Từ lúc bắt đầu" : "Đang xử lý");
+        addFact(processingLabel, durationText(timing.processingMs), liveTiming ? "processing" : null);
+      }
+      if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
       if(isTrash && timing.deletedAt) addFact("Chuyển vào rác", fmtDateTime(timing.deletedAt));
       card.appendChild(facts);
       var recurrenceText = recurrenceLabel(task);
@@ -2740,6 +2776,10 @@
   render();
   checkReminders();
   setInterval(checkReminders, 15000);
+  setInterval(updateLiveTaskCardTimes, 1000);
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) updateLiveTaskCardTimes();
+  });
 })();
 </script>
 </body>

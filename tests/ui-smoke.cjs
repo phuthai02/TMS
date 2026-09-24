@@ -316,7 +316,7 @@ async function main() {
       assert.ok(facts.some(([label]) => label === 'Bắt đầu'));
       assert.ok(facts.some(([label]) => label === 'Kết thúc'));
       assert.ok(facts.some(([label, value]) => label === 'Tổng xử lý' && value === '2 giờ'));
-      assert.ok(facts.some(([label, value]) => label === 'Tổng chờ duyệt' && value === '1 giờ'));
+      assert.ok(facts.some(([label, value]) => label === 'Tổng chờ phê duyệt' && value === '1 giờ'));
       assert.ok(await evaluate(`!!document.querySelector('[data-task-id="metric-done"] .t-description')`));
       if (width === 320) await evaluate(`document.querySelector('[data-task-id="metric-done"]').scrollIntoView({block:'center'})`);
       const cardShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -333,6 +333,68 @@ async function main() {
         assert.deepEqual(moved, {sameBoard:true,inTrash:true,deletedFact:true,hasProgress:false});
       }
     }
+    await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 900, deviceScaleFactor: 1, mobile: true });
+    await evaluate(`(() => {
+      const now=Date.now();
+      const today=new Date(now); today.setHours(0,0,0,0);
+      const at=(minutes,seconds=0)=>new Date(now-minutes*60000-seconds*1000).toISOString();
+      localStorage.setItem('tqm_tasks_v1',JSON.stringify([{
+        id:'metric-pending',title:'Chờ duyệt lần hai',description:'Đã gửi lại sau khi chỉnh sửa.',status:'pending',
+        createdAt:today.toISOString(),history:[
+          {at:at(10),from:null,to:'todo'},
+          {at:at(8,10),from:'todo',to:'inprogress'},
+          {at:at(6,20),from:'inprogress',to:'pending'},
+          {at:at(4,10),from:'pending',to:'inprogress'},
+          {at:at(2,10),from:'inprogress',to:'pending'}
+        ],reminderAt:null,recurrenceId:null
+      }]));
+      localStorage.setItem('tqm_series_v1','{}');
+    })()`);
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    await evaluate(`document.getElementById('tab-work').click()`);
+    const pendingBefore = await evaluate(`(() => {
+      const card=document.querySelector('[data-task-id="metric-pending"]');
+      window.__qaTimingBoard=document.querySelector('.board');
+      window.__qaTimingCard=card;
+      return Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]));
+    })()`);
+    assert.equal(pendingBefore['Đang chờ phê duyệt'], '2 phút');
+    assert.equal(pendingBefore['Tổng chờ phê duyệt'], '4 phút');
+    assert.equal(pendingBefore['Từ lúc bắt đầu'], '8 phút');
+    await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    const pendingAfter = await evaluate(`(() => {
+      const card=document.querySelector('[data-task-id="metric-pending"]');
+      return {sameBoard:document.querySelector('.board')===window.__qaTimingBoard,sameCard:card===window.__qaTimingCard,
+        facts:Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]))};
+    })()`);
+    assert.equal(pendingAfter.sameBoard, true, 'live timer does not rebuild board');
+    assert.equal(pendingAfter.sameCard, true, 'live timer does not rebuild card');
+    assert.equal(pendingAfter.facts['Đang chờ phê duyệt'], '4 phút');
+    assert.equal(pendingAfter.facts['Tổng chờ phê duyệt'], '6 phút');
+    assert.equal(pendingAfter.facts['Từ lúc bắt đầu'], '10 phút');
+    await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; document.querySelector('[data-task-id="metric-pending"]').scrollIntoView({block:'center'}); })()`);
+    const pendingShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/pending-realtime-320.png`, Buffer.from(pendingShot.data, 'base64'));
+    const resumed = await evaluate(`(() => {
+      const transfer=new DataTransfer(); transfer.setData('text/plain','metric-pending');
+      document.querySelectorAll('.column .card-list')[1].dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));
+      const card=document.querySelector('[data-task-id="metric-pending"]');
+      return {sameBoard:document.querySelector('.board')===window.__qaTimingBoard,sameCard:card===window.__qaTimingCard,
+        live:card.getAttribute('data-live-timing'),labels:Array.from(card.querySelectorAll('.task-card-fact-label')).map(node=>node.textContent)};
+    })()`);
+    assert.equal(resumed.sameBoard, true);
+    assert.equal(resumed.sameCard, true);
+    assert.equal(resumed.live, 'true');
+    assert.ok(resumed.labels.includes('Đang xử lý'));
+    assert.ok(!resumed.labels.includes('Đang chờ phê duyệt'));
+    await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    const resumedAfter = await evaluate(`(() => Object.fromEntries(Array.from(document.querySelectorAll('[data-task-id="metric-pending"] .task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent])))()`);
+    assert.equal(resumedAfter['Đang xử lý'], '10 phút');
+    assert.equal(resumedAfter['Tổng chờ phê duyệt'], '4 phút');
+    await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
   } finally {
     socket.close();
   }
