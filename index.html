@@ -947,6 +947,10 @@
   }
   function occurrenceDateOf(task){ return task.occurrenceDate || task.createdAt; }
   function isRecurringTask(task){ return !!(task && task.recurrenceId && task.recurrenceRule); }
+  function taskCreatedAt(task){
+    var definition = isRecurringTask(task) && state.series[task.recurrenceId];
+    return (definition && definition.createdAt) || task.createdAt;
+  }
   function nextRecurrenceDate(current, rule, startIso){
     var next = new Date(current);
     if(rule === "daily") next.setDate(next.getDate() + 1);
@@ -995,7 +999,7 @@
       title: definition.title,
       description: definition.description || "",
       status: definition.initialStatus || "todo",
-      createdAt: iso,
+      createdAt: definition.createdAt || definition.start || iso,
       occurrenceDate: iso,
       history: [{at: iso, from: null, to: definition.initialStatus || "todo"}],
       reminderAt: null,
@@ -1032,14 +1036,14 @@
       return t.recurrenceId === displayTask.recurrenceId && dateKey(occurrenceDateOf(t)) === dateKey(displayTask.occurrenceDate);
     });
     if(existing) return existing;
-    var createdAt = new Date().toISOString();
+    var materializedAt = new Date().toISOString();
     var created = {
       id: uid(),
       title: displayTask.title,
       description: displayTask.description || "",
       status: displayTask.status || "todo",
-      createdAt: createdAt,
-      history: [{at: createdAt, from: null, to: displayTask.status || "todo"}],
+      createdAt: definition.createdAt || displayTask.createdAt,
+      history: [{at: materializedAt, from: null, to: displayTask.status || "todo"}],
       reminderAt: displayTask.reminderAt || null,
       reminderNotifiedAt: null,
       recurrenceId: displayTask.recurrenceId,
@@ -1138,6 +1142,7 @@
           description:seed.description || "",
           rule:seed.recurrenceRule,
           start:seed.recurrenceStart || occurrenceDateOf(seed),
+          createdAt:seed.createdAt,
           anchorDate:dateKey(occurrenceDateOf(seed)),
           initialStatus:seed.recurrenceInitialStatus || "todo",
           excludedDates:[]
@@ -1146,6 +1151,11 @@
       }
       var definition = state.series[seriesId];
       if(!definition.anchorDate){ definition.anchorDate = dateKey(occurrenceDateOf(items[0])); changed = true; }
+      if(!definition.createdAt){
+        var anchor = items.find(function(item){ return dateKey(occurrenceDateOf(item)) === definition.anchorDate; });
+        definition.createdAt = (anchor || items[0]).createdAt;
+        changed = true;
+      }
       if(!Array.isArray(definition.excludedDates)){ definition.excludedDates = []; changed = true; }
       if(legacyExcludedBySeries[seriesId]) legacyExcludedBySeries[seriesId].forEach(function(key){
         if(definition.excludedDates.indexOf(key) === -1){ definition.excludedDates.push(key); changed = true; }
@@ -1478,7 +1488,7 @@
       task.recurrenceInitialStatus = "todo";
       state.series[seriesId] = {
         title:task.title, description:task.description || "", rule:rule,
-        start:start, anchorDate:dateKey(start), initialStatus:"todo", excludedDates:[]
+        start:start, createdAt:task.createdAt, anchorDate:dateKey(start), initialStatus:"todo", excludedDates:[]
       };
     }
     saveTasks();
@@ -1491,11 +1501,22 @@
     })) return false;
     var task = materializeDisplayTask(displayTask);
     if(!task) return false;
+    var initialEvent = task.history.find(function(item){ return item.from === null; }) || task.history[0];
+    var previousInitialAt = initialEvent && initialEvent.at;
+    var definition = isRecurringTask(task) && state.series[task.recurrenceId];
+    var isOriginalAnchor = definition && definition.anchorDate === dateKey(occurrenceDateOf(task)) &&
+      definition.createdAt === task.createdAt && previousInitialAt === task.createdAt;
     historyTimes.forEach(function(item){
       if(task.history[item.index]) task.history[item.index].at = item.iso;
     });
     var firstEvent = task.history.find(function(item){ return item.from === null; }) || task.history[0];
-    if(firstEvent) task.createdAt = firstEvent.at;
+    if(firstEvent){
+      if(!definition || task.createdAt !== definition.createdAt) task.createdAt = firstEvent.at;
+      else if(isOriginalAnchor && firstEvent.at !== previousInitialAt){
+        task.createdAt = firstEvent.at;
+        definition.createdAt = firstEvent.at;
+      }
+    }
     saveTasks();
     return true;
   }
@@ -1505,14 +1526,20 @@
     if(!definition || definition.anchorDate !== dateKey(occurrenceDateOf(task))) return;
     var nextDate = new Date(occurrenceDateOf(task));
     var excludedDates = new Set(definition.excludedDates || []);
-    for(var i = 0; i <= excludedDates.size; i++){
+    var trashedDates = state.tasks.filter(function(item){
+      return item.recurrenceId === task.recurrenceId && item.status === "trash";
+    }).length;
+    for(var i = 0; i <= excludedDates.size + trashedDates; i++){
       nextDate = nextRecurrenceDate(nextDate, definition.rule, definition.start);
       if(!nextDate) return;
       var key = dateKey(nextDate);
       if(excludedDates.has(key)) continue;
-      if(state.tasks.some(function(candidate){
+      var existing = state.tasks.find(function(candidate){
         return candidate.recurrenceId === task.recurrenceId && dateKey(occurrenceDateOf(candidate)) === key;
-      })){
+      });
+      if(existing){
+        if(existing.status === "trash") continue;
+        existing.createdAt = definition.createdAt || taskCreatedAt(task);
         definition.anchorDate = key;
         return;
       }
@@ -2707,7 +2734,7 @@
     var scheduleRow = el("div", {class:"row2"});
     var createdField = el("div", {class:"field created-date-field"});
     createdField.appendChild(el("label", {}, ["Ngày tạo"]));
-    createdField.appendChild(el("input", {type:"text", value:task.isVirtual ? "—" : fmtDate(task.createdAt), disabled:"disabled"}));
+    createdField.appendChild(el("input", {type:"text", value:fmtDate(taskCreatedAt(task)), disabled:"disabled"}));
     scheduleRow.appendChild(createdField);
     var recurrenceField = el("div", {class:"field"});
     recurrenceField.appendChild(el("label", {}, ["Lịch lặp"]));
@@ -3113,7 +3140,7 @@
           task.occurrenceDate = startIso;
           state.series[seriesId] = {
             title:line, description:"", rule:repeatSelect.value,
-            start:startIso, anchorDate:dateKey(startIso),
+            start:startIso, createdAt:task.createdAt, anchorDate:dateKey(startIso),
             initialStatus:"todo", excludedDates:[]
           };
         }

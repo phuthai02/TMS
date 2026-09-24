@@ -122,10 +122,11 @@ async function main() {
     await evaluate(`(() => {
       const now=new Date();
       const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12).toISOString();
+      const created=new Date(now.getFullYear(),now.getMonth(),now.getDate()-2,9).toISOString();
       const key=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
       localStorage.setItem('tqm_tasks_v1',JSON.stringify([{
         id:'recurring-root',title:'Lịch lặp thử nghiệm',description:'',status:'todo',
-        createdAt:start,history:[{at:start,from:null,to:'todo'}],reminderAt:null,
+        createdAt:created,history:[{at:created,from:null,to:'todo'}],reminderAt:null,
         recurrenceId:'qa-series',recurrenceRule:'daily',recurrenceStart:start,
         recurrenceInitialStatus:'todo',occurrenceDate:start
       }]));
@@ -146,6 +147,12 @@ async function main() {
     assert.equal(await evaluate(`document.querySelector('.modal-detail').textContent.includes('Bản ảo dùng quy tắc của chuỗi; mở bản ghi thật để chỉnh.')`), false);
     assert.equal(await evaluate(`document.querySelector('.modal-detail').textContent.includes('Đổi lịch lặp sẽ áp dụng cho cả chuỗi. Các bản ghi đã chỉnh sửa vẫn được giữ.')`), false);
     assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-rule-select').disabled`), true, 'virtual occurrence cannot change repeat rule');
+    assert.equal(await evaluate(`(() => {
+      const task=JSON.parse(localStorage.getItem('tqm_tasks_v1'))[0];
+      const definition=JSON.parse(localStorage.getItem('tqm_series_v1'))['qa-series'];
+      const date=new Date(task.createdAt); const expected=String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+date.getFullYear();
+      return definition.createdAt===task.createdAt && document.querySelector('.created-date-field input').value===expected;
+    })()`), true, 'virtual detail shows original task creation date');
     await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.modal-confirm.has-extra,.modal-confirm .confirm-extra').length`), 1, 'recurring delete offers a series action');
     const seriesConfirmShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -586,7 +593,11 @@ async function main() {
     assert.ok(await evaluate(`!!document.querySelector('.task-card[data-virtual="true"]')`), 'repeat rule generates virtual next day');
     await evaluate(`document.querySelector('.task-card[data-virtual="true"]').click()`);
     assert.equal(await evaluate(`document.querySelector('.recurrence-rule-select').disabled`), true);
-    assert.equal(await evaluate(`document.querySelector('.created-date-field input').value`), '—');
+    assert.equal(await evaluate(`(() => {
+      const root=JSON.parse(localStorage.getItem('tqm_tasks_v1')).find(item=>item.id==='qa-inline');
+      const date=new Date(root.createdAt); const expected=String(date.getDate()).padStart(2,'0')+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+date.getFullYear();
+      return document.querySelector('.created-date-field input').value===expected;
+    })()`), true, 'new virtual occurrence inherits root creation date');
     await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
     await evaluate(`document.querySelector('.period-arrow[title="Kỳ trước"]').click()`);
     await evaluate(`document.querySelector('[data-task-id="qa-inline"]').click()`);

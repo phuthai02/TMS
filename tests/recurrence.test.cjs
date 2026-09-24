@@ -43,18 +43,25 @@ const occurrences = (year, month, day) => api.getDisplayTasks(range(year, month,
   .filter(task => api.dateKey(task.occurrenceDate || task.createdAt) === `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`);
 const seriesId = 'daily-test';
 const root = api.addTask('Việc gốc', 'todo', at(2026, 9, 24), seriesId, false);
+root.createdAt = at(2026, 9, 20);
+root.history[0].at = root.createdAt;
 Object.assign(root, {
   recurrenceRule: 'daily', recurrenceStart: at(2026, 9, 24),
   recurrenceInitialStatus: 'todo', occurrenceDate: at(2026, 9, 24),
 });
 state.series[seriesId] = {
   title: 'Việc gốc', description: '', rule: 'daily', start: at(2026, 9, 24),
-  anchorDate: '2026-09-24', initialStatus: 'todo', excludedDates: [],
+  createdAt: root.createdAt, anchorDate: '2026-09-24', initialStatus: 'todo', excludedDates: [],
 };
 api.saveTasks();
 
 let day25 = occurrences(2026, 9, 25).find(t => t.isVirtual);
 assert.ok(day25, 'ngày kế tiếp là bản ảo');
+assert.equal(day25.createdAt, root.createdAt, 'bản ảo kế thừa ngày tạo của bản gốc');
+assert.equal(day25.history[0].at, day25.occurrenceDate, 'hoạt động của bản ảo vẫn theo ngày riêng');
+api.updateTaskHistoryTimes(root.id, [{index:0, iso:at(2026, 9, 21)}]);
+assert.equal(state.series[seriesId].createdAt, root.createdAt, 'sửa mốc tạo của bản gốc đồng bộ cả chuỗi');
+assert.equal(occurrences(2026, 9, 25).find(t => t.isVirtual).createdAt, root.createdAt);
 assert.equal(state.tasks.length, 1, 'xem bản ảo không tạo bản ghi thật');
 assert.equal(api.setStatus(day25.id, 'todo'), true);
 assert.equal(state.tasks.length, 1, 'chọn lại trạng thái hiện tại không ghi dữ liệu');
@@ -62,6 +69,8 @@ assert.equal(state.tasks.length, 1, 'chọn lại trạng thái hiện tại kh�
 assert.equal(api.setStatus(day25.id, 'inprogress'), true);
 assert.equal(state.tasks.length, 2, 'chỉ ngày đổi trạng thái được materialize');
 assert.equal(state.tasks.find(t => t.occurrenceDate === day25.occurrenceDate).status, 'inprogress');
+assert.equal(state.tasks.find(t => t.occurrenceDate === day25.occurrenceDate).createdAt, root.createdAt,
+  'bản ảo được sửa riêng vẫn giữ ngày tạo của chuỗi');
 assert.equal(occurrences(2026, 9, 26).find(t => t.isVirtual).status, 'todo');
 api.updateTaskFields(day25.id, 'Việc riêng ngày 25', 'Ghi chú riêng', at(2026, 9, 25));
 assert.equal(state.tasks.length, 2);
@@ -82,6 +91,9 @@ api.deleteTask(root.id);
 assert.equal(state.series[seriesId].anchorDate, '2026-09-26');
 assert.equal(state.tasks.length, 1, 'xóa bản gốc chỉ tạo một anchor kế tiếp');
 assert.equal(api.dateKey(state.tasks[0].occurrenceDate), '2026-09-26');
+assert.equal(state.tasks[0].createdAt, root.createdAt, 'bản gốc được đôn lên giữ ngày tạo ban đầu');
+assert.equal(state.series[seriesId].createdAt, root.createdAt);
+assert.equal(occurrences(2026, 9, 28).find(t => t.isVirtual).createdAt, root.createdAt);
 assert.equal(occurrences(2026, 9, 24).filter(t => t.recurrenceId === seriesId).length, 0);
 
 const year2027 = api.getDisplayTasks([api.startOfDay(at(2027, 1, 1)), api.endOfDay(at(2027, 12, 31))]);
@@ -101,10 +113,38 @@ const anchor = state.tasks[0];
 const changedHistoryAt = at(2026, 9, 27);
 api.updateTaskHistoryTimes(anchor.id, [{ index: 0, iso: changedHistoryAt }]);
 assert.equal(api.dateKey(anchor.occurrenceDate), '2026-09-26', 'sửa lịch sử không dời ngày lặp');
+assert.equal(anchor.createdAt, root.createdAt, 'sửa hoạt động riêng không đổi ngày tạo của chuỗi');
 
 api.deleteRecurringSeries(seriesId);
 assert.equal(occurrences(2050, 6, 6).length, 0);
 assert.equal(state.tasks.length, 0);
+
+const promotedRoot = api.addTask('Bản gốc khác', 'todo', at(2026, 9, 24), 'existing-next', false);
+promotedRoot.createdAt = at(2026, 9, 19);
+Object.assign(promotedRoot, {recurrenceRule:'daily', recurrenceStart:at(2026, 9, 24), occurrenceDate:at(2026, 9, 24)});
+const existingNext = api.addTask('Bản ngày 25 đã chỉnh', 'inprogress', at(2026, 9, 25), 'existing-next', false);
+Object.assign(existingNext, {recurrenceRule:'daily', recurrenceStart:at(2026, 9, 24), occurrenceDate:at(2026, 9, 25)});
+const existingHistory = JSON.stringify(existingNext.history);
+state.series['existing-next'] = {title:'Bản gốc khác',description:'',rule:'daily',start:at(2026, 9, 24),
+  createdAt:promotedRoot.createdAt,anchorDate:'2026-09-24',initialStatus:'todo',excludedDates:[]};
+api.deleteTask(promotedRoot.id);
+assert.equal(existingNext.createdAt, promotedRoot.createdAt, 'bản thật kế tiếp kế thừa ngày tạo khi thành bản gốc');
+assert.equal(JSON.stringify(existingNext.history), existingHistory, 'lịch sử bản thật kế tiếp không bị đổi');
+assert.equal(existingNext.title, 'Bản ngày 25 đã chỉnh');
+api.deleteRecurringSeries('existing-next');
+
+const skippedRoot = api.addTask('Gốc bỏ qua ngày rác', 'todo', at(2026, 9, 24), 'skip-trash', false);
+skippedRoot.createdAt = at(2026, 9, 18);
+Object.assign(skippedRoot, {recurrenceRule:'daily', recurrenceStart:at(2026, 9, 24), occurrenceDate:at(2026, 9, 24)});
+const trashedNext = api.addTask('Bản đã vào rác', 'trash', at(2026, 9, 25), 'skip-trash', false);
+Object.assign(trashedNext, {recurrenceRule:'daily', recurrenceStart:at(2026, 9, 24), occurrenceDate:at(2026, 9, 25)});
+state.series['skip-trash'] = {title:'Gốc bỏ qua ngày rác',description:'',rule:'daily',start:at(2026, 9, 24),
+  createdAt:skippedRoot.createdAt,anchorDate:'2026-09-24',initialStatus:'todo',excludedDates:[]};
+api.deleteTask(skippedRoot.id);
+assert.equal(state.series['skip-trash'].anchorDate, '2026-09-26', 'bản trong rác không thành bản gốc mới');
+assert.equal(occurrences(2026, 9, 26).find(task => task.recurrenceId === 'skip-trash').createdAt, skippedRoot.createdAt);
+assert.equal(trashedNext.status, 'trash', 'bản rác độc lập được giữ nguyên');
+api.deleteRecurringSeries('skip-trash');
 
 const trashRoot = api.addTask('Xóa hàng loạt', 'trash', at(2026, 9, 24), 'trash-series', false);
 Object.assign(trashRoot, { recurrenceRule: 'daily', recurrenceStart: at(2026, 9, 24), occurrenceDate: at(2026, 9, 24) });
@@ -112,11 +152,12 @@ const trash25 = api.addTask('Xóa hàng loạt', 'trash', at(2026, 9, 25), 'tras
 Object.assign(trash25, { recurrenceRule: 'daily', recurrenceStart: at(2026, 9, 24), occurrenceDate: at(2026, 9, 25) });
 state.series['trash-series'] = {
   title: 'Xóa hàng loạt', description: '', rule: 'daily', start: at(2026, 9, 24),
-  anchorDate: '2026-09-24', initialStatus: 'todo', excludedDates: [],
+  createdAt: trashRoot.createdAt, anchorDate: '2026-09-24', initialStatus: 'todo', excludedDates: [],
 };
 api.emptyTrash();
 assert.equal(state.tasks.length, 1, 'dọn nhiều ngày lặp chỉ giữ một anchor mới');
 assert.equal(api.dateKey(state.tasks[0].occurrenceDate), '2026-09-26');
+assert.equal(state.tasks[0].createdAt, trashRoot.createdAt, 'dọn rác bản gốc vẫn giữ ngày tạo');
 assert.equal(occurrences(2026, 9, 24).length, 0);
 assert.equal(occurrences(2026, 9, 25).length, 0);
 api.deleteRecurringSeries('trash-series');
@@ -137,6 +178,7 @@ state.tasks = [{
 state.series = {};
 api.normalizeRecurringTasks();
 assert.ok(state.series.legacy.excludedDates.includes('2026-09-25'));
+assert.equal(state.series.legacy.createdAt, state.tasks[0].createdAt);
 assert.equal(occurrences(2026, 9, 25).filter(t => t.recurrenceId === 'legacy').length, 0);
 assert.equal(api.loadTasks().length, 1);
 assert.ok(api.loadSeries().legacy);
