@@ -10,11 +10,13 @@ const testScript = script.slice(0, script.indexOf('  // ---------- init --------
   globalThis.testApi = {
     state, addTask, getDisplayTasks, getTaskById, setStatus, setTaskToTrash,
     updateTaskFields, updateTaskHistoryTimes, deleteTask, deleteRecurringSeries,
-    emptyTrash, normalizeRecurringTasks, loadTasks, loadSeries, saveTasks,
+    emptyTrash, normalizeRecurringTasks, migrateLegacyData, loadTasks, loadSeries, saveTasks,
     dateKey, recurrenceDates, startOfDay, endOfDay, nextRecurrenceDate
   };
 })();`;
 const storage = new Map();
+let blockedWriteKey = null;
+let blockBackup = false;
 const context = {
   console,
   Date,
@@ -22,7 +24,12 @@ const context = {
   Math,
   localStorage: {
     getItem(key) { return storage.get(key) ?? null; },
-    setItem(key, value) { storage.set(key, value); },
+    setItem(key, value) {
+      if (blockBackup && key.startsWith('tqm_migration_backup_v2_')) throw new Error('QuotaExceededError');
+      if (key === blockedWriteKey) { blockedWriteKey = null; throw new Error('QuotaExceededError'); }
+      storage.set(key, value);
+    },
+    removeItem(key) { storage.delete(key); },
   },
   document: { getElementById() { return { addEventListener() {} }; } },
 };
@@ -133,5 +140,70 @@ assert.ok(state.series.legacy.excludedDates.includes('2026-09-25'));
 assert.equal(occurrences(2026, 9, 25).filter(t => t.recurrenceId === 'legacy').length, 0);
 assert.equal(api.loadTasks().length, 1);
 assert.ok(api.loadSeries().legacy);
+
+const oldCreated = at(2026, 10, 2);
+const oldGroupStart = at(2026, 10, 3);
+const oldGroupNext = at(2026, 10, 4);
+const oldGroupEdited = at(2026, 10, 5);
+const oldTasks = [
+  { id: 'old-standalone', title: 'Việc cũ riêng', status: 'todo', createdAt: oldCreated,
+    history: [{ at: oldCreated, from: null, to: 'todo' }], reminderAt: null },
+  { id: 'old-root', title: 'Việc lặp cũ', description: '', status: 'todo', createdAt: oldGroupStart,
+    history: [{ at: oldGroupStart, from: null, to: 'todo' }], recurrenceId: 'old-group', recurrenceExcludedDates: ['2026-10-06'] },
+  { id: 'old-duplicate', title: 'Việc lặp cũ', description: '', status: 'todo', createdAt: oldGroupNext,
+    history: [{ at: oldGroupNext, from: null, to: 'todo' }], recurrenceId: 'old-group' },
+  { id: 'old-edited', title: 'Việc riêng ngày 5', description: 'Ghi chú riêng', status: 'pending', createdAt: oldGroupEdited,
+    history: [{ at: oldGroupEdited, from: null, to: 'todo' }, { at: oldGroupEdited, from: 'todo', to: 'pending' }],
+    reminderAt: oldGroupEdited, recurrenceId: 'old-group' },
+  { id: 'already-new', title: 'Đã có ngày thực hiện', status: 'todo', createdAt: at(2026, 9, 24),
+    occurrenceDate: at(2026, 10, 10), history: [{ at: at(2026, 9, 24), from: null, to: 'todo' }] },
+];
+const oldTasksRaw = JSON.stringify(oldTasks);
+storage.set('tqm_tasks_v1', oldTasksRaw);
+storage.set('tqm_series_v1', '{}');
+state.tasks = JSON.parse(oldTasksRaw);
+state.series = {};
+assert.equal(api.migrateLegacyData(), true);
+const migratedRoot = state.tasks.find(task => task.id === 'old-root');
+const migratedStandalone = state.tasks.find(task => task.id === 'old-standalone');
+const migratedEdited = state.tasks.find(task => task.id === 'old-edited');
+assert.equal(migratedStandalone.occurrenceDate, oldCreated);
+assert.equal(migratedStandalone.createdAt, oldCreated, 'không tự đoán lại ngày tạo cũ');
+assert.equal(migratedRoot.occurrenceDate, oldGroupStart);
+assert.equal(state.tasks.some(task => task.id === 'old-duplicate'), false, 'bản cũ chưa sửa thành bản ảo');
+assert.equal(migratedEdited.occurrenceDate, oldGroupEdited);
+assert.equal(migratedEdited.title, 'Việc riêng ngày 5');
+assert.equal(migratedEdited.description, 'Ghi chú riêng');
+assert.equal(migratedEdited.status, 'pending');
+assert.equal(migratedEdited.reminderAt, oldGroupEdited);
+assert.equal(migratedEdited.history.length, 2);
+assert.equal(state.tasks.find(task => task.id === 'already-new').occurrenceDate, at(2026, 10, 10));
+assert.ok(state.series['old-group'].excludedDates.includes('2026-10-06'));
+const backups = () => [...storage.keys()].filter(key => key.startsWith('tqm_migration_backup_v2_'));
+assert.equal(backups().length, 1);
+assert.equal(JSON.parse(storage.get(backups()[0])).tasks, oldTasksRaw, 'bản sao giữ nguyên JSON gốc');
+const migratedTasksRaw = storage.get('tqm_tasks_v1');
+assert.equal(api.migrateLegacyData(), false, 'chạy lại không migration lần nữa');
+assert.equal(backups().length, 1, 'không tạo bản sao dư khi chạy lại');
+assert.equal(storage.get('tqm_tasks_v1'), migratedTasksRaw);
+
+const blockedFixture = JSON.stringify([oldTasks[0]]);
+state.tasks = JSON.parse(blockedFixture);
+state.series = {};
+storage.set('tqm_tasks_v1', blockedFixture);
+storage.set('tqm_series_v1', '{}');
+blockBackup = true;
+assert.equal(api.migrateLegacyData(), false);
+assert.equal(storage.get('tqm_tasks_v1'), blockedFixture, 'không ghi đè nếu không thể sao lưu');
+assert.equal(state.tasks[0].occurrenceDate, undefined);
+assert.equal(state.migrationWarning, true);
+blockBackup = false;
+state.migrationWarning = false;
+blockedWriteKey = 'tqm_tasks_v1';
+assert.equal(api.migrateLegacyData(), false);
+assert.equal(storage.get('tqm_tasks_v1'), blockedFixture, 'ghi lỗi phải phục hồi task gốc');
+assert.equal(storage.get('tqm_series_v1'), '{}', 'ghi lỗi phải phục hồi chuỗi gốc');
+assert.equal(backups().length, 1, 'bản sao của lần ghi lỗi được dọn sau khi phục hồi');
+assert.equal(api.saveTasks(), false, 'khi migration lỗi không được ghi dữ liệu khác');
 
 console.log('Recurrence regression tests: OK');

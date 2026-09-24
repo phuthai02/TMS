@@ -626,6 +626,32 @@ async function main() {
         count:tasks.length};
     })()`);
     assert.deepEqual(detached, {series:0,root:null,override:null,count:3}, 'turning off repeat keeps real occurrences');
+
+    const oldBrowserData = await evaluate(`(() => {
+      const oldDate=new Date().toISOString();
+      const old=[{id:'qa-old-browser',title:'Công việc dữ liệu cũ',description:'Ghi chú được giữ',
+        status:'todo',createdAt:oldDate,history:[{at:oldDate,from:null,to:'todo'}],reminderAt:null}];
+      const raw=JSON.stringify(old);
+      localStorage.setItem('tqm_tasks_v1',raw);
+      localStorage.setItem('tqm_series_v1','{}');
+      return raw;
+    })()`);
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const browserMigration = await evaluate(`(() => {
+      const task=JSON.parse(localStorage.getItem('tqm_tasks_v1'))[0];
+      const backups=Object.keys(localStorage).filter(key=>key.startsWith('tqm_migration_backup_v2_'))
+        .map(key=>JSON.parse(localStorage.getItem(key)).tasks);
+      return {createdAt:task.createdAt,occurrenceDate:task.occurrenceDate,description:task.description,
+        backups,backupCount:backups.length};
+    })()`);
+    assert.equal(browserMigration.createdAt, browserMigration.occurrenceDate, 'old createdAt maps to execution date on page load');
+    assert.equal(browserMigration.description, 'Ghi chú được giữ');
+    assert.ok(browserMigration.backups.includes(oldBrowserData), 'migration saves original localStorage JSON');
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    assert.equal(await evaluate(`Object.keys(localStorage).filter(key=>key.startsWith('tqm_migration_backup_v2_')).length`),
+      browserMigration.backupCount, 'reload does not repeat migration');
   } finally {
     socket.close();
   }

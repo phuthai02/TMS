@@ -48,6 +48,7 @@
   .side-item.active{background:#fde3ee;color:var(--pink-dark);}
 
   main{flex:1;min-width:0;padding:20px 24px;}
+  .migration-warning{max-width:720px;margin:20px auto;padding:16px 18px;border:1px solid #f0c36d;border-radius:12px;background:#fff8e8;color:#664d20;font-size:13px;line-height:1.6;}
 
   .toolbar{
     display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;
@@ -695,6 +696,7 @@
 
   var STORAGE_KEY = "tqm_tasks_v1";
   var SERIES_STORAGE_KEY = "tqm_series_v1";
+  var MIGRATION_BACKUP_PREFIX = "tqm_migration_backup_v2_";
   var STATUSES = [
     {key:"todo", label:"Mới", color:"#2f8fe0"},
     {key:"inprogress", label:"Đang thực hiện", color:"#e0378f"},
@@ -730,6 +732,7 @@
     reportTo: null,
     tasks: [],
     series: {},
+    migrationWarning: false,
     activeTaskId: null,
     bulkOpen: false,
     workViewApi: null,
@@ -752,10 +755,12 @@
     }catch(e){ return {}; }
   }
   function saveTasks(){
+    if(state.migrationWarning) return false;
     try{
       localStorage.setItem(SERIES_STORAGE_KEY, JSON.stringify(state.series));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
-    }catch(e){}
+      return true;
+    }catch(e){ return false; }
   }
 
   function uid(){
@@ -1067,7 +1072,7 @@
     });
     return result;
   }
-  function normalizeRecurringTasks(){
+  function normalizeRecurringTasks(persist){
     var groups = {};
     var legacyExcludedBySeries = {};
     var changed = false;
@@ -1146,7 +1151,69 @@
         if(definition.excludedDates.indexOf(key) === -1){ definition.excludedDates.push(key); changed = true; }
       });
     });
-    if(changed) saveTasks();
+    if(changed && persist !== false) saveTasks();
+    return changed;
+  }
+  function migrateLegacyData(){
+    var originalTasks = state.tasks;
+    var originalSeries = state.series;
+    var changed = false;
+    try{
+      state.tasks = JSON.parse(JSON.stringify(originalTasks));
+      state.series = JSON.parse(JSON.stringify(originalSeries));
+      state.tasks.forEach(function(task){
+        if(task && !task.occurrenceDate && task.createdAt && !isNaN(new Date(task.createdAt).getTime())){
+          task.occurrenceDate = task.createdAt;
+          changed = true;
+        }
+      });
+      changed = normalizeRecurringTasks(false) || changed;
+    }catch(e){
+      state.tasks = originalTasks;
+      state.series = originalSeries;
+      state.migrationWarning = true;
+      return false;
+    }
+    if(!changed){
+      state.tasks = originalTasks;
+      state.series = originalSeries;
+      return false;
+    }
+    var backupKey = MIGRATION_BACKUP_PREFIX + uid();
+    var oldTasksRaw = null;
+    var oldSeriesRaw = null;
+    var backupSaved = false;
+    try{
+      oldTasksRaw = localStorage.getItem(STORAGE_KEY);
+      oldSeriesRaw = localStorage.getItem(SERIES_STORAGE_KEY);
+      var backupRaw = JSON.stringify({
+        createdAt:new Date().toISOString(), tasks:oldTasksRaw, series:oldSeriesRaw
+      });
+      localStorage.setItem(backupKey, backupRaw);
+      backupSaved = true;
+      if(localStorage.getItem(backupKey) !== backupRaw) throw new Error("Backup verification failed");
+      var seriesRaw = JSON.stringify(state.series);
+      var tasksRaw = JSON.stringify(state.tasks);
+      localStorage.setItem(SERIES_STORAGE_KEY, seriesRaw);
+      localStorage.setItem(STORAGE_KEY, tasksRaw);
+      if(localStorage.getItem(SERIES_STORAGE_KEY) !== seriesRaw ||
+         localStorage.getItem(STORAGE_KEY) !== tasksRaw) throw new Error("Migration verification failed");
+      return true;
+    }catch(e){
+      var restored = false;
+      if(backupSaved) try{
+        if(oldSeriesRaw === null) localStorage.removeItem(SERIES_STORAGE_KEY);
+        else localStorage.setItem(SERIES_STORAGE_KEY, oldSeriesRaw);
+        if(oldTasksRaw === null) localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, oldTasksRaw);
+        restored = true;
+      }catch(restoreError){}
+      state.tasks = originalTasks;
+      state.series = originalSeries;
+      state.migrationWarning = true;
+      if(restored) try{ localStorage.removeItem(backupKey); }catch(cleanupError){}
+      return false;
+    }
   }
   function getPreviousRange(period, range){
     if(period === "all" || !range[0] || !range[1]) return [null, null];
@@ -3067,6 +3134,13 @@
     app.innerHTML = "";
     state.workViewApi = null;
     state.reportViewApi = null;
+    if(state.migrationWarning){
+      app.appendChild(el("div", {class:"migration-warning", role:"alert"}, [
+        "Không thể chuyển dữ liệu cũ an toàn. Dữ liệu gốc chưa bị ghi đè; hãy kiểm tra dung lượng lưu trữ hoặc bản dữ liệu cũ rồi tải lại trang."
+      ]));
+      modalRoot.innerHTML = "";
+      return;
+    }
     var workTab = document.getElementById("tab-work");
     var reportTab = document.getElementById("tab-report");
     workTab.className = "side-item" + (state.view === "work" ? " active" : "");
@@ -3087,10 +3161,12 @@
   // ---------- init ----------
   state.tasks = loadTasks();
   state.series = loadSeries();
-  normalizeRecurringTasks();
+  migrateLegacyData();
   render();
-  checkReminders();
-  setInterval(checkReminders, 15000);
+  if(!state.migrationWarning){
+    checkReminders();
+    setInterval(checkReminders, 15000);
+  }
   setInterval(updateLiveTimingDisplays, 1000);
   document.addEventListener("visibilitychange", function(){
     if(!document.hidden) updateLiveTimingDisplays();
