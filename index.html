@@ -477,7 +477,7 @@
   .insight-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#c62f63,#f481a7);}
   .insight-link{padding:4px 0;border:0;background:none;color:var(--pink-dark);font-size:11px;font-weight:700;cursor:pointer;}
   .insight-link:hover{text-decoration:underline;}
-  .report-summary{gap:14px;margin-bottom:16px;}
+  .report-summary{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:16px;}
   .report-summary .stat-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;height:134px;padding:17px 18px;border:1px solid var(--border);border-radius:12px;background:#fff;box-shadow:var(--shadow-sm);text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
   .report-summary .stat-card:hover{border-color:#cbd5e2;box-shadow:0 10px 22px rgba(20,36,61,.08);}
   .report-summary .stat-card::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 4px 4px 0;background:var(--stat-color);}
@@ -486,6 +486,21 @@
   .stat-card .lbl{color:var(--text-dim);font-size:11.5px;font-weight:680;}
   .stat-card-arrow{display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:#f4f6f9;color:var(--muted);font-size:13px;}
   .report-summary .stat-card:hover .stat-card-arrow{background:var(--pink-soft);color:var(--pink-dark);}
+  .approval-timing{display:flex;flex-direction:column;gap:3px;min-width:150px;color:var(--text-dim);font-size:10.5px;line-height:1.4;}
+  .approval-timing-row{display:flex;justify-content:space-between;gap:8px;}
+  .approval-timing strong{color:var(--text);font-weight:700;text-align:right;white-space:nowrap;}
+  .detail-approval{min-width:0;margin:0 0 17px;padding:12px 14px;border:1px solid #e7ddfb;border-radius:10px;background:#faf7ff;}
+  .detail-approval .approval-timing{font-size:12px;gap:7px;}
+  .detail-approval .approval-timing-row{gap:12px;}
+  .approval-table-cell{min-width:185px;}
+  .report-table-scroll table{min-width:660px;}
+  .report-todo-list table{min-width:740px;}
+  .summary-list-modal table{min-width:780px;}
+  .report-table-scroll th,.report-todo-list th{white-space:nowrap;}
+  .table-scroll-hint{display:none;margin:-7px 0 10px;color:var(--muted);font-size:10px;}
+  .reminder-item .approval-timing{margin-top:6px;}
+  @media (max-width:1100px){.report-summary{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media (max-width:700px){.table-scroll-hint{display:block;}}
   .report-top-grid{gap:16px;margin-bottom:20px;}
   .report-top-grid .panel{height:350px;}
   .status-chart{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;}
@@ -601,7 +616,7 @@
     .summary-list-modal{height:calc(100dvh - 20px);}
     .summary-list-modal .modal-body{padding:14px 16px;}
     .modal-reminder .modal-body{padding:4px 16px 12px;}
-    .summary-list-modal table{min-width:560px;}
+    .summary-list-modal table{min-width:780px;}
     .reminder-item{align-items:flex-start;flex-wrap:wrap;gap:8px;padding:13px 0;}
     .reminder-item-copy{flex-basis:100%;}
     .reminder-item .btn{margin-left:auto;}
@@ -1148,6 +1163,18 @@
     if(!parts.length) parts.push("dưới 1 phút");
     return parts.join(" ");
   }
+  function liveDurationText(ms){
+    var seconds = Math.floor(Math.max(0, ms) / 1000);
+    var days = Math.floor(seconds / 86400); seconds %= 86400;
+    var hours = Math.floor(seconds / 3600); seconds %= 3600;
+    var minutes = Math.floor(seconds / 60); seconds %= 60;
+    var parts = [];
+    if(days) parts.push(days + " ngày");
+    if(hours) parts.push(hours + " giờ");
+    if(minutes || hours || days) parts.push(minutes + " phút");
+    parts.push(seconds + " giây");
+    return parts.join(" ");
+  }
   function taskTimingSummary(task, nowMs){
     if(nowMs === undefined) nowMs = Date.now();
     var history = Array.isArray(task.history) ? task.history : [];
@@ -1182,10 +1209,38 @@
     return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, processingMs:processingMs,
       currentPendingMs:currentPendingMs, pendingMs:hasPending ? pendingMs : null};
   }
-  function updateLiveTaskCardTimes(){
+  function approvalTimingView(task, className){
+    var timing = taskTimingSummary(task);
+    var wrap = el("div", {class:"approval-timing" + (className ? " " + className : "")});
+    if(timing.pendingMs === null){
+      wrap.appendChild(el("span", {}, ["—"]));
+      return wrap;
+    }
+    if(task.status === "pending"){
+      wrap._liveTimingTask = task;
+      wrap.setAttribute("data-live-timing", "true");
+    }
+    function row(label, ms, kind){
+      var attrs = {title:task.status === "pending" ? liveDurationText(ms) : durationText(ms)};
+      if(kind) attrs["data-live-kind"] = kind;
+      wrap.appendChild(el("div", {class:"approval-timing-row"}, [
+        el("span", {}, [label]),
+        el("strong", attrs, [task.status === "pending" ? liveDurationText(ms) : durationText(ms)])
+      ]));
+    }
+    if(timing.currentPendingMs !== null) row("Đang chờ", timing.currentPendingMs, "currentPending");
+    row("Tổng chờ", timing.pendingMs, task.status === "pending" ? "totalPending" : null);
+    return wrap;
+  }
+  function pendingOver12Hours(tasks, nowMs){
+    return tasks.filter(function(task){
+      return task.status === "pending" && taskTimingSummary(task, nowMs).currentPendingMs > 12 * 3600000;
+    });
+  }
+  function updateLiveTimingDisplays(){
     var nowMs = Date.now();
-    document.querySelectorAll('.board .task-card[data-live-timing="true"]').forEach(function(card){
-      var task = card._liveTimingTask;
+    document.querySelectorAll('[data-live-timing="true"]').forEach(function(container){
+      var task = container._liveTimingTask;
       if(!task) return;
       var timing = taskTimingSummary(task, nowMs);
       var values = {
@@ -1193,12 +1248,17 @@
         currentPending:timing.currentPendingMs,
         totalPending:timing.pendingMs
       };
-      card.querySelectorAll('[data-live-kind]').forEach(function(node){
+      container.querySelectorAll('[data-live-kind]').forEach(function(node){
         var ms = values[node.getAttribute("data-live-kind")];
         if(ms === null) return;
-        var value = durationText(ms);
+        var value = liveDurationText(ms);
         if(node.textContent !== value){ node.textContent = value; node.title = value; }
       });
+    });
+    document.querySelectorAll('.stat-card[data-overdue-card="true"]').forEach(function(card){
+      var count = pendingOver12Hours(card._pendingCandidates || [], nowMs).length;
+      var node = card.querySelector(".num");
+      if(node && node.textContent !== String(count)) node.textContent = String(count);
     });
   }
 
@@ -1569,10 +1629,12 @@
     var list = el("ul", {class:"reminder-list"});
     dueTasks.slice().sort(function(a,b){ return new Date(a.reminderAt) - new Date(b.reminderAt); }).forEach(function(t){
       var item = el("li", {class:"reminder-item"});
-      item.appendChild(el("div", {class:"reminder-item-copy"}, [
+      var reminderCopy = el("div", {class:"reminder-item-copy"}, [
         el("p", {class:"reminder-item-title"}, [t.title]),
         el("div", {class:"reminder-item-meta"}, ["Nhắc lúc "+fmtDateTime(t.reminderAt), statusBadge(t.status)])
-      ]));
+      ]);
+      if(taskTimingSummary(t).pendingMs !== null) reminderCopy.appendChild(approvalTimingView(t));
+      item.appendChild(reminderCopy);
       item.appendChild(el("button", {type:"button", class:"btn", onclick:function(){
         closeReminder();
         openTaskDetail(t.id);
@@ -1633,6 +1695,7 @@
         el("th", {}, ["Tên công việc"]),
         el("th", {}, ["Trạng thái"]),
         el("th", {}, ["Ngày thực hiện"]),
+        el("th", {}, ["Phê duyệt"]),
         el("th", {}, ["Nhắc nhở"]),
         el("th", {style:"width:120px;"}, ["Tiến độ"])
       ])]));
@@ -1646,6 +1709,7 @@
         row.appendChild(el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]));
         row.appendChild(el("td", {}, [statusBadge(t.status)]));
         row.appendChild(el("td", {style:"white-space:nowrap;"}, [fmtDate(occurrenceDateOf(t))]));
+        row.appendChild(el("td", {class:"approval-table-cell"}, [approvalTimingView(t)]));
         row.appendChild(el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [t.reminderAt ? fmtDateTime(t.reminderAt) : "—"]));
         var pct = PROGRESS_MAP[t.status] || 0;
         row.appendChild(el("td", {}, [progressCircle(pct, STATUS_MAP[t.status] ? STATUS_MAP[t.status].color : "#999")]));
@@ -1781,12 +1845,12 @@
       addFact("Ngày thực hiện", fmtDate(occurrenceDateOf(task)));
       if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
       if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
-      if(timing.currentPendingMs !== null) addFact("Đang chờ phê duyệt", durationText(timing.currentPendingMs), "currentPending");
+      if(timing.currentPendingMs !== null) addFact("Đang chờ phê duyệt", liveDurationText(timing.currentPendingMs), "currentPending");
       if(timing.processingMs !== null){
         var processingLabel = timing.endAt ? "Tổng xử lý" : (task.status === "pending" ? "Từ lúc bắt đầu" : "Đang xử lý");
-        addFact(processingLabel, durationText(timing.processingMs), liveTiming ? "processing" : null);
+        addFact(processingLabel, liveTiming ? liveDurationText(timing.processingMs) : durationText(timing.processingMs), liveTiming ? "processing" : null);
       }
-      if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
+      if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", task.status === "pending" ? liveDurationText(timing.pendingMs) : durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
       if(isTrash && timing.deletedAt) addFact("Chuyển vào rác", fmtDateTime(timing.deletedAt));
       card.appendChild(facts);
       var recurrenceText = recurrenceLabel(task);
@@ -2128,6 +2192,7 @@
       if(doneAt && inRange(doneAt, range)){
         durationRows.push({
           taskId: t.id,
+          task: t,
           title: t.title,
           start: firstInProgressAt,
           end: doneAt,
@@ -2187,18 +2252,22 @@
       {label:"Tổng số công việc", color:"var(--pink-dark)"},
       {label:"Đang thực hiện", status:"inprogress", color:"#e0378f"},
       {label:"Chờ phê duyệt", status:"pending", color:"#8b5cf6"},
-      {label:"Hoàn thành", status:"done", color:"#22c55e"}
+      {label:"Hoàn thành", status:"done", color:"#22c55e"},
+      {label:"Chờ duyệt quá 12 giờ", status:"pending", overdue:true, color:"#d97706"}
     ].forEach(function(item, index){
-      var tasks = item.status
+      var candidates = item.status
         ? currentSummaryTasks.filter(function(t){ return t.status === item.status; })
         : currentSummaryTasks;
+      var tasks = item.overdue ? pendingOver12Hours(candidates, Date.now()) : candidates;
       var previousTasks = item.status
         ? previousSummaryTasks.filter(function(t){ return t.status === item.status; })
         : previousSummaryTasks;
-      var comparison = summaryComparison(tasks.length, previousTasks.length, !!previousRange[0]);
-      summaryRow.appendChild(el("button", {
+      var comparison = item.overdue
+        ? {text:"Đang chờ trên 12 giờ", color:"#b45309"}
+        : summaryComparison(tasks.length, previousTasks.length, !!previousRange[0]);
+      var summaryCard = el("button", {
         type:"button", class:"stat-card clickable fade-in", style:"--stat-color:"+item.color+";",
-        onclick:function(){ renderTaskListModal(item.label, tasks); }
+        onclick:function(){ renderTaskListModal(item.label, item.overdue ? pendingOver12Hours(candidates, Date.now()) : tasks); }
       }, [
         el("div", {class:"stat-card-head"}, [
           el("span", {class:"lbl"}, [item.label]),
@@ -2206,7 +2275,12 @@
         ]),
         el("div", {class:"num"}, [String(tasks.length)]),
         el("div", {class:"compare", style:"color:"+comparison.color+";"}, [comparison.text])
-      ]));
+      ]);
+      if(item.overdue){
+        summaryCard.setAttribute("data-overdue-card", "true");
+        summaryCard._pendingCandidates = candidates;
+      }
+      summaryRow.appendChild(summaryCard);
     });
     reportContent.appendChild(summaryRow);
 
@@ -2224,13 +2298,15 @@
     if(!durationRows.length){
       panelCompleted.appendChild(el("div", {class:"empty-hint"}, ["Chưa có công việc nào hoàn thành trong khoảng thời gian này."]));
     } else {
+      panelCompleted.appendChild(el("span", {class:"table-scroll-hint"}, ["Kéo ngang để xem thời gian →"]));
       var completedWrap = el("div", {class:"clickable-table report-todo-list"});
       var completedTable = el("table");
       completedTable.appendChild(el("thead", {}, [el("tr", {}, [
         el("th", {}, ["Tên việc"]),
         el("th", {}, ["Bắt đầu"]),
         el("th", {}, ["Hoàn thành"]),
-        el("th", {}, ["Thời gian xử lý"])
+        el("th", {}, ["Thời gian xử lý"]),
+        el("th", {}, ["Phê duyệt"])
       ])]));
       var completedBody = el("tbody");
       durationRows.forEach(function(r){
@@ -2238,7 +2314,8 @@
           el("td", {style:"font-weight:600;color:var(--text);"}, [r.title]),
           el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [r.start ? fmtDateTime(r.start) : "—"]),
           el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDateTime(r.end)]),
-          el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [r.durationMs !== null ? durationText(r.durationMs) : "—"])
+          el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [r.durationMs !== null ? durationText(r.durationMs) : "—"]),
+          el("td", {class:"approval-table-cell"}, [approvalTimingView(r.task)])
         ]));
       });
       completedTable.appendChild(completedBody);
@@ -2256,19 +2333,22 @@
     if(!todoInRange.length){
       todoPanel.appendChild(el("div", {class:"empty-hint"}, ["Không có việc nào cần làm trong khoảng thời gian này."]));
     } else {
+      todoPanel.appendChild(el("span", {class:"table-scroll-hint"}, ["Kéo ngang để xem thời gian phê duyệt →"]));
       var todoWrap = el("div", {class:"report-table-scroll clickable-table"});
       var todoTable = el("table");
       todoTable.appendChild(el("thead", {}, [el("tr", {}, [
         el("th", {}, ["Tên công việc"]),
         el("th", {}, ["Trạng thái"]),
-        el("th", {}, ["Ngày thực hiện"])
+        el("th", {}, ["Ngày thực hiện"]),
+        el("th", {}, ["Phê duyệt"])
       ])]));
       var todoBody = el("tbody");
       todoInRange.forEach(function(t){
         todoBody.appendChild(el("tr", taskRowAttrs(t.id), [
           el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]),
           el("td", {}, [statusBadge(t.status)]),
-          el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))])
+          el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))]),
+          el("td", {class:"approval-table-cell"}, [approvalTimingView(t)])
         ]));
       });
       todoTable.appendChild(todoBody);
@@ -2282,12 +2362,14 @@
     if(!reminderRows.length){
       reminderPanel.appendChild(el("div", {class:"empty-hint"}, ["Không có lịch nhắc nào trong khoảng thời gian này."]));
     } else {
+      reminderPanel.appendChild(el("span", {class:"table-scroll-hint"}, ["Kéo ngang để xem thời gian phê duyệt →"]));
       var reminderWrap = el("div", {class:"report-table-scroll clickable-table"});
       var reminderTable = el("table");
       reminderTable.appendChild(el("thead", {}, [el("tr", {}, [
         el("th", {}, ["Tên công việc"]),
         el("th", {}, ["Trạng thái"]),
-        el("th", {}, ["Nhắc lúc"])
+        el("th", {}, ["Nhắc lúc"]),
+        el("th", {}, ["Phê duyệt"])
       ])]));
       var reminderBody = el("tbody");
       reminderRows.forEach(function(t){
@@ -2295,6 +2377,7 @@
         row.appendChild(el("td", {style:"font-weight:600;color:var(--text);"}, [t.title]));
         row.appendChild(el("td", {}, [statusBadge(t.status)]));
         row.appendChild(el("td", {style:"white-space:nowrap;color:var(--text-dim);"}, [fmtDateTime(t.reminderAt)]));
+        row.appendChild(el("td", {class:"approval-table-cell"}, [approvalTimingView(t)]));
         reminderBody.appendChild(row);
       });
       reminderTable.appendChild(reminderBody);
@@ -2379,6 +2462,14 @@
     if(isRecurringTask(task)) createdField.appendChild(el("p", {class:"recurrence-note"}, [recurrenceLabel(task)]));
     row2.appendChild(createdField);
     colLeft.appendChild(row2);
+
+    if(taskTimingSummary(task).pendingMs !== null){
+      var approvalSection = el("div", {class:"detail-approval"}, [
+        el("div", {class:"detail-section-title"}, ["Thời gian phê duyệt"]),
+        approvalTimingView(task)
+      ]);
+      colLeft.appendChild(approvalSection);
+    }
 
     var reminderField = el("div", {class:"field"});
     reminderField.appendChild(el("label", {}, ["Nhắc nhở"]));
@@ -2776,9 +2867,9 @@
   render();
   checkReminders();
   setInterval(checkReminders, 15000);
-  setInterval(updateLiveTaskCardTimes, 1000);
+  setInterval(updateLiveTimingDisplays, 1000);
   document.addEventListener("visibilitychange", function(){
-    if(!document.hidden) updateLiveTaskCardTimes();
+    if(!document.hidden) updateLiveTimingDisplays();
   });
 })();
 </script>

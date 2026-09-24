@@ -64,7 +64,7 @@ async function main() {
       console.log(`report ${width}:`, report);
       assert.ok(report.bodyWidth <= report.width + 1, `report overflows horizontally at ${width}px`);
       assert.equal(report.insight, true);
-      assert.equal(report.statButtons, 4);
+      assert.equal(report.statButtons, 5);
       if (width < 600) assert.equal(report.navPosition, 'fixed', 'mobile navigation stays accessible');
       const reportShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/report-${width}.png`, Buffer.from(reportShot.data, 'base64'));
@@ -235,7 +235,7 @@ async function main() {
       await send('Page.navigate', { url: targetUrl });
       await new Promise(resolve => setTimeout(resolve, 350));
       assert.equal(await evaluate(`document.querySelectorAll('.report-bottom-grid .panel:last-child tbody tr').length`), 2, 'report reminders remain a table');
-      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.report-bottom-grid .panel:last-child th')).map(th=>th.textContent)`), ['Tên công việc','Trạng thái','Nhắc lúc']);
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.report-bottom-grid .panel:last-child th')).map(th=>th.textContent)`), ['Tên công việc','Trạng thái','Nhắc lúc','Phê duyệt']);
       await evaluate(`document.querySelector('.report-bottom-grid .panel:last-child').scrollIntoView({block:'center'})`);
       const reportReminderShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/report-reminders-${width}.png`, Buffer.from(reportReminderShot.data, 'base64'));
@@ -244,7 +244,7 @@ async function main() {
       await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
       await evaluate(`document.querySelector('.report-summary button').click()`);
       assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal tbody tr').length`), 2, 'summary modal remains a table');
-      assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal th').length`), 6);
+      assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal th').length`), 7);
       const summaryBounds = await evaluate(`(() => { const box=document.querySelector('.summary-list-modal'); return {scrollWidth:box.scrollWidth,clientWidth:box.clientWidth}; })()`);
       assert.ok(summaryBounds.scrollWidth <= summaryBounds.clientWidth + 1, `summary modal overflows at ${width}px`);
       if (width === 320) {
@@ -311,6 +311,7 @@ async function main() {
       })()`);
       await send('Page.navigate', { url: targetUrl });
       await new Promise(resolve => setTimeout(resolve, 350));
+      assert.equal(await evaluate(`document.querySelector('.report-top-grid .report-todo-list .approval-timing strong').textContent`), '1 giờ');
       await evaluate(`document.getElementById('tab-work').click()`);
       const facts = await evaluate(`(() => { const card=document.querySelector('[data-task-id="metric-done"]'); return Array.from(card.querySelectorAll('.task-card-fact')).map(node=>[node.querySelector('.task-card-fact-label').textContent,node.querySelector('.task-card-fact-value').textContent]); })()`);
       assert.ok(facts.some(([label]) => label === 'Bắt đầu'));
@@ -359,9 +360,9 @@ async function main() {
       window.__qaTimingCard=card;
       return Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]));
     })()`);
-    assert.equal(pendingBefore['Đang chờ phê duyệt'], '2 phút');
-    assert.equal(pendingBefore['Tổng chờ phê duyệt'], '4 phút');
-    assert.equal(pendingBefore['Từ lúc bắt đầu'], '8 phút');
+    assert.match(pendingBefore['Đang chờ phê duyệt'], /^2 phút \d+ giây$/);
+    assert.match(pendingBefore['Tổng chờ phê duyệt'], /^4 phút \d+ giây$/);
+    assert.match(pendingBefore['Từ lúc bắt đầu'], /^8 phút \d+ giây$/);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const pendingAfter = await evaluate(`(() => {
@@ -371,9 +372,9 @@ async function main() {
     })()`);
     assert.equal(pendingAfter.sameBoard, true, 'live timer does not rebuild board');
     assert.equal(pendingAfter.sameCard, true, 'live timer does not rebuild card');
-    assert.equal(pendingAfter.facts['Đang chờ phê duyệt'], '4 phút');
-    assert.equal(pendingAfter.facts['Tổng chờ phê duyệt'], '6 phút');
-    assert.equal(pendingAfter.facts['Từ lúc bắt đầu'], '10 phút');
+    assert.match(pendingAfter.facts['Đang chờ phê duyệt'], /^4 phút \d+ giây$/);
+    assert.match(pendingAfter.facts['Tổng chờ phê duyệt'], /^6 phút \d+ giây$/);
+    assert.match(pendingAfter.facts['Từ lúc bắt đầu'], /^10 phút \d+ giây$/);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; document.querySelector('[data-task-id="metric-pending"]').scrollIntoView({block:'center'}); })()`);
     const pendingShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/pending-realtime-320.png`, Buffer.from(pendingShot.data, 'base64'));
@@ -392,8 +393,64 @@ async function main() {
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const resumedAfter = await evaluate(`(() => Object.fromEntries(Array.from(document.querySelectorAll('[data-task-id="metric-pending"] .task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent])))()`);
-    assert.equal(resumedAfter['Đang xử lý'], '10 phút');
+    assert.match(resumedAfter['Đang xử lý'], /^10 phút \d+ giây$/);
     assert.equal(resumedAfter['Tổng chờ phê duyệt'], '4 phút');
+    await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
+
+    await evaluate(`(() => {
+      const now=Date.now();
+      const ago=ms=>new Date(now-ms).toISOString();
+      localStorage.setItem('tqm_tasks_v1',JSON.stringify([{
+        id:'approval-boundary',title:'Duyệt hồ sơ lần hai',description:'Đã trả về và gửi duyệt lại.',status:'pending',
+        createdAt:ago(14*3600000),history:[
+          {at:ago(14*3600000),from:null,to:'todo'},
+          {at:ago(13.5*3600000),from:'todo',to:'inprogress'},
+          {at:ago(13*3600000),from:'inprogress',to:'pending'},
+          {at:ago(12.5*3600000),from:'pending',to:'inprogress'},
+          {at:ago(12*3600000-30000),from:'inprogress',to:'pending'}
+        ],reminderAt:null,recurrenceId:null
+      }]));
+      localStorage.setItem('tqm_series_v1','{}');
+    })()`);
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    await evaluate(`document.querySelectorAll('.period-quick-button')[3].click()`);
+    const approvalReport = await evaluate(`(() => {
+      const overdue=document.querySelector('[data-overdue-card="true"]');
+      const row=Array.from(document.querySelectorAll('.report-bottom-grid .panel:first-child tbody tr')).find(row=>row.textContent.includes('Duyệt hồ sơ lần hai'));
+      window.__qaOverdueCard=overdue;
+      window.__qaApprovalRow=row;
+      return {count:overdue.querySelector('.num').textContent,labels:Array.from(row.querySelectorAll('.approval-timing-row')).map(row=>[row.querySelector('span').textContent,row.querySelector('strong').textContent])};
+    })()`);
+    assert.equal(approvalReport.count, '0');
+    assert.equal(approvalReport.labels[0][0], 'Đang chờ');
+    assert.match(approvalReport.labels[0][1], /^11 giờ 59 phút \d+ giây$/);
+    assert.equal(approvalReport.labels[1][0], 'Tổng chờ');
+    assert.match(approvalReport.labels[1][1], /^12 giờ 29 phút \d+ giây$/);
+    await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+40000; })()`);
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    const approvalReportAfter = await evaluate(`(() => {
+      const card=document.querySelector('[data-overdue-card="true"]');
+      const row=Array.from(document.querySelectorAll('.report-bottom-grid .panel:first-child tbody tr')).find(row=>row.textContent.includes('Duyệt hồ sơ lần hai'));
+      return {sameCard:card===window.__qaOverdueCard,sameRow:row===window.__qaApprovalRow,count:card.querySelector('.num').textContent,
+        values:Array.from(row.querySelectorAll('.approval-timing strong')).map(node=>node.textContent)};
+    })()`);
+    assert.equal(approvalReportAfter.sameCard, true, 'report card updates without rebuilding');
+    assert.equal(approvalReportAfter.sameRow, true, 'report row updates without rebuilding');
+    assert.equal(approvalReportAfter.count, '1', '12-hour threshold updates without refresh');
+    assert.match(approvalReportAfter.values[0], /^12 giờ 0 phút \d+ giây$/);
+    assert.match(approvalReportAfter.values[1], /^12 giờ 30 phút \d+ giây$/);
+    await evaluate(`document.querySelector('.report-bottom-grid .panel:first-child').scrollIntoView({block:'center'})`);
+    const approvalReportShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/approval-report-320.png`, Buffer.from(approvalReportShot.data, 'base64'));
+    await evaluate(`document.querySelector('[data-overdue-card="true"]').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal tbody tr').length`), 1);
+    assert.equal(await evaluate(`document.querySelector('.summary-list-modal .approval-timing-row strong').textContent`), approvalReportAfter.values[0]);
+    await evaluate(`document.querySelector('.summary-list-modal tbody tr').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.detail-approval .approval-timing-row').length`), 2);
+    assert.match(await evaluate(`document.querySelector('.detail-approval .approval-timing-row strong').textContent`), /^12 giờ 0 phút \d+ giây$/);
+    const approvalDetailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/approval-detail-320.png`, Buffer.from(approvalDetailShot.data, 'base64'));
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
   } finally {
     socket.close();
