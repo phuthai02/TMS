@@ -132,6 +132,11 @@ async function main() {
     await evaluate(`document.querySelector('.task-card[data-virtual="true"]').click()`);
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 1, 'mở bản ảo không lưu bản thật');
     assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-note').textContent.includes('Chỉnh sửa chỉ áp dụng cho ngày này.')`), true);
+    await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.modal-confirm.has-extra,.modal-confirm .confirm-extra').length`), 1, 'recurring delete offers a series action');
+    const seriesConfirmShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/confirm-series-390.png`, Buffer.from(seriesConfirmShot.data, 'base64'));
+    await evaluate(`document.querySelector('.modal-confirm .confirm-cancel').click()`);
     await evaluate(`document.querySelector('.modal-detail .modal-footer .btn-primary').click()`);
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 1, 'lưu không đổi không tạo bản thật');
     console.log('virtual detail: read-only open/save OK');
@@ -213,6 +218,76 @@ async function main() {
       });
       const chart = await evaluate(`(() => { const panel=document.querySelector('.report-top-grid .panel'); return {clientHeight:panel.clientHeight,scrollHeight:panel.scrollHeight}; })()`);
       assert.ok(chart.scrollHeight <= chart.clientHeight + 1, `status chart clips at ${width}px`);
+    }
+    for (const width of [1440, 320]) {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 600 });
+      await evaluate(`(() => {
+        const now=new Date();
+        const today=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12).toISOString();
+        const notified=now.toISOString();
+        const tasks=[
+          {id:'modal-1',title:'Chuẩn bị báo cáo khách hàng',description:'',status:'todo',createdAt:today,history:[{at:today,from:null,to:'todo'}],reminderAt:today,reminderNotifiedAt:notified,recurrenceId:null},
+          {id:'modal-2',title:'Kiểm tra bản giao diện trên điện thoại',description:'',status:'inprogress',createdAt:today,history:[{at:today,from:null,to:'todo'},{at:today,from:'todo',to:'inprogress'}],reminderAt:today,reminderNotifiedAt:notified,recurrenceId:null}
+        ];
+        localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks));
+        localStorage.setItem('tqm_series_v1','{}');
+      })()`);
+      await send('Page.navigate', { url: targetUrl });
+      await new Promise(resolve => setTimeout(resolve, 350));
+      assert.equal(await evaluate(`document.querySelectorAll('.report-reminder-item').length`), 2, 'report reminders are a list');
+      assert.equal(await evaluate(`document.querySelectorAll('.report-reminder-item .btn').length`), 2, 'each report reminder has a view button');
+      await evaluate(`document.querySelector('.report-reminder-list').scrollIntoView({block:'center'})`);
+      const reportReminderShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      fs.writeFileSync(`${outputDir}/report-reminders-${width}.png`, Buffer.from(reportReminderShot.data, 'base64'));
+      await evaluate(`document.querySelector('.report-reminder-item .btn').click()`);
+      assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'report reminder opens task detail');
+      await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
+      await evaluate(`document.querySelector('.report-summary button').click()`);
+      assert.equal(await evaluate(`document.querySelectorAll('.summary-task-item').length`), 2, 'summary modal shows task cards');
+      const summaryBounds = await evaluate(`(() => { const box=document.querySelector('.summary-list-modal'); return {scrollWidth:box.scrollWidth,clientWidth:box.clientWidth}; })()`);
+      assert.ok(summaryBounds.scrollWidth <= summaryBounds.clientWidth + 1, `summary modal overflows at ${width}px`);
+      const summaryShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      fs.writeFileSync(`${outputDir}/summary-modal-${width}.png`, Buffer.from(summaryShot.data, 'base64'));
+      await evaluate(`(() => { const input=document.querySelector('.summary-search'); input.value='khách hàng'; input.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+      assert.equal(await evaluate(`document.querySelectorAll('.summary-task-item').length`), 1, 'summary search filters cards');
+      await evaluate(`document.querySelector('.summary-task-item .btn').click()`);
+      assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'summary view button opens task detail');
+      await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
+      assert.ok(await evaluate(`!!document.querySelector('.modal-confirm.is-danger')`), 'delete opens danger confirmation');
+      const confirmShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      fs.writeFileSync(`${outputDir}/confirm-modal-${width}.png`, Buffer.from(confirmShot.data, 'base64'));
+      await evaluate(`document.querySelector('.modal-confirm .btn-outline').click()`);
+      await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
+      await evaluate(`document.getElementById('tab-work').click()`);
+      await evaluate(`document.querySelector('.toolbar > .btn-primary').click()`);
+      assert.ok(await evaluate(`!!document.querySelector('.modal-bulk')`), 'bulk modal opens');
+      await evaluate(`document.querySelector('.modal-bulk .modal-footer .btn-primary').click()`);
+      assert.equal(await evaluate(`document.querySelector('.modal-bulk .field-error.show').textContent`), 'Vui lòng nhập ít nhất một công việc.');
+      const bulkShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      fs.writeFileSync(`${outputDir}/bulk-modal-${width}.png`, Buffer.from(bulkShot.data, 'base64'));
+      await evaluate(`document.querySelector('.modal-bulk .modal-header .icon-btn').click()`);
+      await evaluate(`(() => { const tasks=JSON.parse(localStorage.getItem('tqm_tasks_v1')); tasks.forEach(task => { task.reminderNotifiedAt=null; task.reminderAt=new Date(Date.now()-60000).toISOString(); }); localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks)); })()`);
+      await send('Page.navigate', { url: targetUrl });
+      await new Promise(resolve => setTimeout(resolve, 350));
+      assert.equal(await evaluate(`document.querySelectorAll('.reminder-item').length`), 2, 'due reminders are listed');
+      assert.equal(await evaluate(`document.querySelectorAll('.reminder-item .btn').length`), 2, 'each due reminder has a view button');
+      const reminderShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      fs.writeFileSync(`${outputDir}/reminder-modal-${width}.png`, Buffer.from(reminderShot.data, 'base64'));
+      await evaluate(`document.querySelector('.reminder-item .btn').click()`);
+      assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'reminder view button opens task detail');
+      if (width === 320) {
+        await evaluate(`(() => {
+          const base=JSON.parse(localStorage.getItem('tqm_tasks_v1'))[0];
+          const tasks=Array.from({length:25},(_,index)=>({...base,id:'long-reminder-'+index,title:'Nhắc việc số '+(index+1),reminderNotifiedAt:null}));
+          localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks));
+        })()`);
+        await send('Page.navigate', { url: targetUrl });
+        await new Promise(resolve => setTimeout(resolve, 350));
+        const longReminder = await evaluate(`(() => { const modal=document.querySelector('.modal-reminder'); const body=modal.querySelector('.modal-body'); const rect=modal.getBoundingClientRect(); return {count:modal.querySelectorAll('.reminder-item').length,scrollHeight:body.scrollHeight,clientHeight:body.clientHeight,top:rect.top,bottom:rect.bottom}; })()`);
+        assert.equal(longReminder.count, 25);
+        assert.ok(longReminder.scrollHeight > longReminder.clientHeight, 'long reminder list scrolls inside modal');
+        assert.ok(longReminder.top >= 0 && longReminder.bottom <= 901, 'long reminder modal stays in viewport');
+      }
     }
   } finally {
     socket.close();
