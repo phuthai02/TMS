@@ -234,24 +234,30 @@ async function main() {
       })()`);
       await send('Page.navigate', { url: targetUrl });
       await new Promise(resolve => setTimeout(resolve, 350));
-      assert.equal(await evaluate(`document.querySelectorAll('.report-reminder-item').length`), 2, 'report reminders are a list');
-      assert.equal(await evaluate(`document.querySelectorAll('.report-reminder-item .btn').length`), 2, 'each report reminder has a view button');
-      await evaluate(`document.querySelector('.report-reminder-list').scrollIntoView({block:'center'})`);
+      assert.equal(await evaluate(`document.querySelectorAll('.report-bottom-grid .panel:last-child tbody tr').length`), 2, 'report reminders remain a table');
+      assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.report-bottom-grid .panel:last-child th')).map(th=>th.textContent)`), ['Tên công việc','Trạng thái','Nhắc lúc']);
+      await evaluate(`document.querySelector('.report-bottom-grid .panel:last-child').scrollIntoView({block:'center'})`);
       const reportReminderShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/report-reminders-${width}.png`, Buffer.from(reportReminderShot.data, 'base64'));
-      await evaluate(`document.querySelector('.report-reminder-item .btn').click()`);
+      await evaluate(`document.querySelector('.report-bottom-grid .panel:last-child tbody tr').click()`);
       assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'report reminder opens task detail');
       await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
       await evaluate(`document.querySelector('.report-summary button').click()`);
-      assert.equal(await evaluate(`document.querySelectorAll('.summary-task-item').length`), 2, 'summary modal shows task cards');
+      assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal tbody tr').length`), 2, 'summary modal remains a table');
+      assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal th').length`), 6);
       const summaryBounds = await evaluate(`(() => { const box=document.querySelector('.summary-list-modal'); return {scrollWidth:box.scrollWidth,clientWidth:box.clientWidth}; })()`);
       assert.ok(summaryBounds.scrollWidth <= summaryBounds.clientWidth + 1, `summary modal overflows at ${width}px`);
+      if (width === 320) {
+        const tableScroll = await evaluate(`(() => { const wrap=document.querySelector('.summary-list-modal .clickable-table'); wrap.scrollLeft=wrap.scrollWidth; return {scrollWidth:wrap.scrollWidth,clientWidth:wrap.clientWidth,scrollLeft:wrap.scrollLeft}; })()`);
+        assert.ok(tableScroll.scrollWidth > tableScroll.clientWidth && tableScroll.scrollLeft > 0, 'summary table scrolls horizontally on mobile');
+        await evaluate(`document.querySelector('.summary-list-modal .clickable-table').scrollLeft=0`);
+      }
       const summaryShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/summary-modal-${width}.png`, Buffer.from(summaryShot.data, 'base64'));
       await evaluate(`(() => { const input=document.querySelector('.summary-search'); input.value='khách hàng'; input.dispatchEvent(new Event('input',{bubbles:true})); })()`);
-      assert.equal(await evaluate(`document.querySelectorAll('.summary-task-item').length`), 1, 'summary search filters cards');
-      await evaluate(`document.querySelector('.summary-task-item .btn').click()`);
-      assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'summary view button opens task detail');
+      assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal tbody tr').length`), 1, 'summary search filters rows');
+      await evaluate(`document.querySelector('.summary-list-modal tbody tr').click()`);
+      assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'summary row opens task detail');
       await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
       assert.ok(await evaluate(`!!document.querySelector('.modal-confirm.is-danger')`), 'delete opens danger confirmation');
       const confirmShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
