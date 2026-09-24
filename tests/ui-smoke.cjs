@@ -289,6 +289,44 @@ async function main() {
         assert.ok(longReminder.top >= 0 && longReminder.bottom <= 901, 'long reminder modal stays in viewport');
       }
     }
+    for (const width of [1790, 320]) {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 600 });
+      await evaluate(`(() => {
+        const today=new Date(); today.setHours(0,0,0,0);
+        const at=hours=>new Date(today.getTime()+hours*3600000).toISOString();
+        localStorage.setItem('tqm_tasks_v1',JSON.stringify([{
+          id:'metric-done',title:'Hoàn tất bản kế hoạch triển khai',
+          description:'Tổng hợp phản hồi, hoàn thiện nội dung và gửi bản cuối cho nhóm phê duyệt.',
+          status:'done',createdAt:at(0),occurrenceDate:at(0),recurrenceId:null,
+          history:[{at:at(0),from:null,to:'todo'},{at:at(0.5),from:'todo',to:'inprogress'},{at:at(1.5),from:'inprogress',to:'pending'},{at:at(2.5),from:'pending',to:'done'}],
+          reminderAt:at(20),reminderNotifiedAt:null
+        }]));
+        localStorage.setItem('tqm_series_v1','{}');
+      })()`);
+      await send('Page.navigate', { url: targetUrl });
+      await new Promise(resolve => setTimeout(resolve, 350));
+      await evaluate(`document.getElementById('tab-work').click()`);
+      const facts = await evaluate(`(() => { const card=document.querySelector('[data-task-id="metric-done"]'); return Array.from(card.querySelectorAll('.task-card-fact')).map(node=>[node.querySelector('.task-card-fact-label').textContent,node.querySelector('.task-card-fact-value').textContent]); })()`);
+      assert.ok(facts.some(([label]) => label === 'Bắt đầu'));
+      assert.ok(facts.some(([label]) => label === 'Kết thúc'));
+      assert.ok(facts.some(([label, value]) => label === 'Tổng xử lý' && value === '2 giờ'));
+      assert.ok(facts.some(([label, value]) => label === 'Tổng chờ duyệt' && value === '1 giờ'));
+      assert.ok(await evaluate(`!!document.querySelector('[data-task-id="metric-done"] .t-description')`));
+      if (width === 320) await evaluate(`document.querySelector('[data-task-id="metric-done"]').scrollIntoView({block:'center'})`);
+      const cardShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      fs.writeFileSync(`${outputDir}/detailed-card-${width}.png`, Buffer.from(cardShot.data, 'base64'));
+      if (width === 320) {
+        const moved = await evaluate(`(() => {
+          const board=document.querySelector('.board');
+          const target=document.querySelector('.trash-column .card-list');
+          const transfer=new DataTransfer(); transfer.setData('text/plain','metric-done');
+          target.dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));
+          const card=target.querySelector('[data-task-id="metric-done"]');
+          return {sameBoard:document.querySelector('.board')===board,inTrash:!!card,deletedFact:card?.textContent.includes('Chuyển vào rác'),hasProgress:!!card?.querySelector('.progress-track')};
+        })()`);
+        assert.deepEqual(moved, {sameBoard:true,inTrash:true,deletedFact:true,hasProgress:false});
+      }
+    }
   } finally {
     socket.close();
   }

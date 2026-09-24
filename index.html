@@ -339,14 +339,23 @@
   .card-list{padding:11px;min-height:70px;overflow-y:auto;overflow-x:hidden;background:#f9fbfe;}
   .column .card-list:empty::after{content:"Chưa có công việc";display:block;padding:30px 8px;color:var(--muted);font-size:11.5px;text-align:center;}
   .card-list.drag-over{background:#fff4f7;outline:2px dashed var(--pink);outline-offset:-6px;}
-  .task-card{margin-bottom:9px;padding:13px;border:1px solid #e1e7ef;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(20,36,61,.035);transition:border-color .15s,box-shadow .15s;}
+  .task-card{margin-bottom:9px;padding:14px;border:1px solid #e1e7ef;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(20,36,61,.035);transition:border-color .15s,box-shadow .15s;}
   .task-card:hover{border-color:#b8c7d8;box-shadow:0 6px 16px rgba(20,36,61,.07);}
-  .task-card .t-title{margin-bottom:11px;font-size:12.5px;font-weight:680;line-height:1.45;}
-  .task-card .t-meta{font-size:11px;color:var(--text-dim);}
+  .task-card .t-title{margin:0 0 4px;color:var(--text);font-size:13px;font-weight:750;line-height:1.4;overflow-wrap:anywhere;}
+  .task-card .t-description{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;margin:0 0 12px;color:var(--text-dim);font-size:11px;line-height:1.45;overflow-wrap:anywhere;}
+  .task-card .t-description.is-empty{color:var(--muted);font-style:italic;}
+  .task-card .t-meta{justify-content:flex-end;min-height:0;margin-bottom:11px;color:var(--text-dim);font-size:11px;}
   .progress-track{height:5px;background:#f2f4f7;}
-  .task-card .t-meta{justify-content:flex-end;min-height:34px;}
-  .card-date-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:8px;color:var(--text-dim);font-size:11px;}
-  .task-recurrence{display:inline-flex;align-items:center;margin-top:9px;padding:4px 7px;border-radius:6px;background:var(--pink-soft);color:var(--pink-dark);font-size:10px;font-weight:650;line-height:1.35;}
+  .task-card-facts{display:flex;flex-direction:column;gap:7px;padding-top:11px;border-top:1px solid #edf0f5;}
+  .task-card-fact{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;}
+  .task-card-fact-label{flex:0 0 auto;color:var(--muted);font-size:10px;font-weight:650;line-height:1.35;}
+  .task-card-fact-value{min-width:0;color:#394b64;font-size:10.5px;font-weight:700;line-height:1.35;text-align:right;overflow-wrap:anywhere;}
+  .task-card-foot{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;}
+  .task-reminder,.task-recurrence{display:inline-flex;align-items:center;padding:5px 7px;border-radius:7px;font-size:10px;font-weight:650;line-height:1.35;overflow-wrap:anywhere;}
+  .task-reminder{background:#fff3f7;color:#bb315e;}
+  .task-reminder.is-overdue{background:#fff1ed;color:#bc4a31;}
+  .task-recurrence{background:#f2f0ff;color:#6e50bd;}
+  .trash-column .task-card{opacity:1;}
   .progress-circle{--progress:0%;--progress-color:var(--pink);position:relative;display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:conic-gradient(var(--progress-color) var(--progress),#edf0f4 0);}
   .progress-circle::before{content:"";position:absolute;inset:4px;border-radius:50%;background:#fff;}
   .progress-circle .progress-pct{position:relative;z-index:1;font-size:9px;font-weight:800;line-height:1;}
@@ -1154,6 +1163,32 @@
     if(!parts.length) parts.push("dưới 1 phút");
     return parts.join(" ");
   }
+  function taskTimingSummary(task){
+    var history = Array.isArray(task.history) ? task.history : [];
+    var startAt = null;
+    var completedAt = null;
+    var deletedAt = null;
+    var pendingMs = 0;
+    var hasPending = false;
+    history.forEach(function(event, index){
+      var at = new Date(event.at).getTime();
+      if(!Number.isFinite(at)) return;
+      if(event.to === "inprogress" && !startAt) startAt = event.at;
+      if(event.to === "done" || event.to === "closed") completedAt = event.at;
+      if(event.to === "trash") deletedAt = event.at;
+      if(event.to !== "pending") return;
+      hasPending = true;
+      var nextAt = history[index + 1] ? new Date(history[index + 1].at).getTime() : Date.now();
+      if(Number.isFinite(nextAt)) pendingMs += Math.max(0, nextAt - at);
+    });
+    var endAt = (task.status === "done" || task.status === "closed" || task.status === "trash") ? completedAt : null;
+    var processingMs = null;
+    if(startAt){
+      var stopAt = endAt ? new Date(endAt).getTime() : (task.status === "inprogress" || task.status === "pending" ? Date.now() : null);
+      if(stopAt !== null && Number.isFinite(stopAt)) processingMs = Math.max(0, stopAt - new Date(startAt).getTime());
+    }
+    return {startAt:startAt, endAt:endAt, deletedAt:deletedAt, processingMs:processingMs, pendingMs:hasPending ? pendingMs : null};
+  }
 
   // ---------- task ops ----------
   function addTask(title, status, createdAt, recurrenceId, persist){
@@ -1705,24 +1740,38 @@
       });
       refreshColumnCounts();
     }
-    function refreshCardProgress(card, colDef){
-      var pct = PROGRESS_MAP[colDef.key] || 0;
-      var track = card.querySelector(".progress-track");
-      var fill = track && track.querySelector(".progress-fill");
-      var label = card.querySelector(".progress-pct");
-      if(fill) {
-        fill.style.width = pct + "%";
-        fill.style.background = colDef.color;
+    function renderWorkCardContents(card, task, colDef, isTrash){
+      card.replaceChildren();
+      card.setAttribute("data-task-title", task.title.toLowerCase());
+      card.setAttribute("aria-label", "Mở công việc " + task.title + (isTrash ? " trong thùng rác" : " ngày " + fmtDate(occurrenceDateOf(task))));
+      card.appendChild(el("div", {class:"t-title", title:task.title}, [task.title]));
+      var description = (task.description || "").trim();
+      card.appendChild(el("p", {class:"t-description"+(description ? "" : " is-empty"), title:description || "Chưa có mô tả"}, [description || "Chưa có mô tả"]));
+      if(!isTrash) card.appendChild(progressBar(PROGRESS_MAP[task.status] || 0, colDef.color));
+      var timing = taskTimingSummary(task);
+      var facts = el("div", {class:"task-card-facts"});
+      function addFact(label, value){
+        facts.appendChild(el("div", {class:"task-card-fact"}, [
+          el("span", {class:"task-card-fact-label"}, [label]),
+          el("strong", {class:"task-card-fact-value", title:value}, [value])
+        ]));
       }
-      if(label){
-        label.textContent = pct + "%";
-        label.style.color = colDef.color;
-      }
-      if(!track || !label){
-        var meta = progressBar(pct, colDef.color);
-        var dateNode = card.lastElementChild;
-        if(dateNode) card.insertBefore(meta, dateNode);
-        else card.appendChild(meta);
+      addFact("Ngày thực hiện", fmtDate(occurrenceDateOf(task)));
+      if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
+      if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
+      if(timing.processingMs !== null) addFact(timing.endAt ? "Tổng xử lý" : "Đang xử lý", durationText(timing.processingMs));
+      if(timing.pendingMs !== null) addFact("Tổng chờ duyệt", durationText(timing.pendingMs));
+      if(isTrash && timing.deletedAt) addFact("Chuyển vào rác", fmtDateTime(timing.deletedAt));
+      card.appendChild(facts);
+      var recurrenceText = recurrenceLabel(task);
+      if((task.reminderAt && !isTrash) || recurrenceText){
+        var foot = el("div", {class:"task-card-foot"});
+        if(task.reminderAt && !isTrash){
+          var reminderPast = new Date(task.reminderAt).getTime() <= Date.now();
+          foot.appendChild(el("span", {class:"task-reminder"+(reminderPast ? " is-overdue" : "")}, ["Nhắc · "+fmtDateTime(task.reminderAt)]));
+        }
+        if(recurrenceText) foot.appendChild(el("span", {class:"task-recurrence"}, [recurrenceText]));
+        card.appendChild(foot);
       }
     }
     var workColumns = {};
@@ -1741,18 +1790,7 @@
       card.addEventListener("keydown", function(e){
         if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openTaskDetail(card.getAttribute("data-task-id")); }
       });
-      card.appendChild(el("div", {class:"t-title"}, [t.title]));
-      var pct = PROGRESS_MAP[t.status] || 0;
-      card.appendChild(progressBar(pct, colDef.color));
-      var metaBottom = el("div", {class:"card-date-row"});
-      metaBottom.appendChild(el("span", {}, [fmtDate(occurrenceDateOf(t))]));
-      if(t.reminderAt){
-        var reminderPast = new Date(t.reminderAt).getTime() <= Date.now();
-        metaBottom.appendChild(el("span", {style:"color:"+(reminderPast?"#ef4444":"#e0378f")+";font-weight:600;"}, ["Nhắc: "+fmtDateTime(t.reminderAt)]));
-      }
-      card.appendChild(metaBottom);
-      var recurrenceText = recurrenceLabel(t);
-      if(recurrenceText) card.appendChild(el("div", {class:"task-recurrence"}, [recurrenceText]));
+      renderWorkCardContents(card, t, colDef, false);
       return card;
     }
     function syncWorkBoardTasks(){
@@ -1845,7 +1883,7 @@
           card.setAttribute("data-task-id", storedTask.id);
           card.setAttribute("data-virtual", "false");
           list.appendChild(card);
-          refreshCardProgress(card, colDef);
+          renderWorkCardContents(card, storedTask, colDef, false);
           applyColumnSearch(column, state.workSearchByStatus[colDef.key]);
           var trashCardList = board.querySelector(".trash-column > .card-list");
           if(trashCardList && !trashCardList.querySelector(".task-card") && !trashCardList.querySelector(".trash-empty-hint")){
@@ -1893,6 +1931,7 @@
         var emptyHint = trashList.querySelector(".trash-empty-hint");
         if(emptyHint) emptyHint.remove();
         trashList.appendChild(card);
+        renderWorkCardContents(card, storedTask, TRASH_STATUS, true);
         applyColumnSearch(trashColumn, state.workSearchByStatus.trash);
         var clearTrashButton = trashColumn.querySelector(".trash-clear button");
         if(clearTrashButton) clearTrashButton.removeAttribute("disabled");
@@ -1918,10 +1957,7 @@
         card.addEventListener("keydown", function(e){
           if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openTaskDetail(t.id); }
         });
-        card.appendChild(el("div", {class:"t-title"}, [t.title]));
-        card.appendChild(el("div", {style:"font-size:11px;color:var(--text-dim);"}, [fmtDate(occurrenceDateOf(t))]));
-        var recurrenceText = recurrenceLabel(t);
-        if(recurrenceText) card.appendChild(el("div", {class:"task-recurrence"}, [recurrenceText]));
+        renderWorkCardContents(card, t, TRASH_STATUS, true);
         trashList.appendChild(card);
       });
     }
