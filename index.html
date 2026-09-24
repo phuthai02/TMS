@@ -2340,9 +2340,7 @@
     var createdField = el("div", {class:"field"});
     createdField.appendChild(el("label", {}, [isRecurringTask(task) ? "Ngày thực hiện" : "Ngày tạo"]));
     createdField.appendChild(el("input", {type:"text", value: fmtDateTime(occurrenceDateOf(task)), disabled:"disabled"}));
-    if(isRecurringTask(task)) createdField.appendChild(el("p", {class:"recurrence-note"}, [
-      recurrenceLabel(task) + " · Chỉnh sửa chỉ áp dụng cho ngày này."
-    ]));
+    if(isRecurringTask(task)) createdField.appendChild(el("p", {class:"recurrence-note"}, [recurrenceLabel(task)]));
     row2.appendChild(createdField);
     colLeft.appendChild(row2);
 
@@ -2671,9 +2669,6 @@
       {value:"yearly", label:"Hằng năm"}
     ].forEach(function(o){ repeatSelect.appendChild(el("option", {value:o.value}, [o.label])); });
     repeatField.appendChild(repeatSelect);
-    repeatField.appendChild(el("p", {class:"field-hint"}, [
-      "Lịch lặp không giới hạn. Mỗi lần chỉ lưu riêng khi bạn chỉnh sửa."
-    ]));
     row1.appendChild(repeatField);
     body.appendChild(row1);
 

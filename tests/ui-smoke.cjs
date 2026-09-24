@@ -131,7 +131,7 @@ async function main() {
     assert.ok(virtual && virtual.id.startsWith('virtual:qa-series:'), 'ngày kế tiếp hiển thị như công việc thật');
     await evaluate(`document.querySelector('.task-card[data-virtual="true"]').click()`);
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 1, 'mở bản ảo không lưu bản thật');
-    assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-note').textContent.includes('Chỉnh sửa chỉ áp dụng cho ngày này.')`), true);
+    assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-note').textContent`), 'Lặp: hàng ngày');
     await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.modal-confirm.has-extra,.modal-confirm .confirm-extra').length`), 1, 'recurring delete offers a series action');
     const seriesConfirmShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
