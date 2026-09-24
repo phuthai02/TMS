@@ -143,7 +143,13 @@
   .field textarea:focus, .field select:focus{
     outline:none;border-color:var(--pink);box-shadow:0 0 0 3px rgba(233,30,99,.12);
   }
-  .field input[disabled]{background:var(--bg);color:var(--text-dim);}
+  .field input[disabled],.field select[disabled]{background:var(--bg);color:var(--text-dim);cursor:not-allowed;}
+  .execution-date-control{position:relative;display:flex;gap:6px;}
+  .execution-date-control>input[type=text]{min-width:0;flex:1;}
+  .execution-date-control .execution-picker-button{flex:0 0 38px;border:1px solid var(--border-strong);border-radius:8px;background:#fff;color:var(--text-dim);cursor:pointer;}
+  .execution-picker-button svg,.history-picker-btn svg{width:15px;height:15px;vertical-align:middle;}
+  .execution-date-control .execution-picker-button:disabled{background:var(--bg);cursor:not-allowed;}
+  .execution-date-control .execution-native-picker{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;right:38px;bottom:0;}
   .field textarea{resize:vertical;min-height:70px;}
   .field input[type=datetime-local]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.6;}
   .field input[type=datetime-local]:hover::-webkit-calendar-picker-indicator{opacity:1;}
@@ -186,6 +192,11 @@
   .history-item .h-title{color:var(--text-dim);}
   .history-item .h-arrow{color:var(--text-dim);}
   .history-time-input{display:none;flex:0 1 210px;min-width:190px;width:210px;border:0;border-bottom:1px solid var(--border);border-radius:0;padding:3px 0;background:transparent;color:var(--text-dim);font-size:11.5px;line-height:1.3;}
+  .history-time-editor{position:relative;display:none;align-items:center;gap:5px;width:100%;min-width:0;}
+  .history-item.is-editing .history-time-editor{display:flex;}
+  .history-time-editor .history-time-input{flex:1;min-width:0;}
+  .history-picker-btn{flex:0 0 27px;height:31px;border:1px solid var(--border-strong);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;}
+  .history-native-picker{position:absolute;right:27px;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;}
   .history-item.is-editing .h-time{display:none;}
   .history-item.is-editing .history-time-input{display:block;}
   .history-item.is-editing{display:block;padding-right:6px;}
@@ -344,6 +355,13 @@
   .task-card .t-title{margin:0 0 4px;color:var(--text);font-size:13px;font-weight:750;line-height:1.4;overflow-wrap:anywhere;}
   .task-card .t-description{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;margin:0 0 12px;color:var(--text-dim);font-size:11px;line-height:1.45;overflow-wrap:anywhere;}
   .task-card .t-description.is-empty{color:var(--muted);font-style:italic;}
+  .task-card .t-title,.task-card .t-description{cursor:text;}
+  .task-card-inline-editor{display:flex;flex-direction:column;gap:7px;margin:0 0 10px;}
+  .task-card-inline-editor input,.task-card-inline-editor textarea{width:100%;min-width:0;padding:7px 8px;border:1px solid var(--pink);border-radius:7px;background:#fff;color:var(--text);font:inherit;box-shadow:0 0 0 2px rgba(216,27,96,.09);}
+  .task-card-inline-editor textarea{min-height:72px;resize:vertical;font-size:11px;line-height:1.45;}
+  .task-card-inline-editor-actions{display:flex;justify-content:flex-end;gap:5px;}
+  .task-card-inline-editor-actions button{min-height:25px;padding:3px 8px;border:1px solid var(--border-strong);border-radius:6px;background:#fff;color:var(--text-dim);font-size:11px;cursor:pointer;}
+  .task-card-inline-editor-actions .inline-save{border-color:var(--pink);background:var(--pink);color:#fff;}
   .task-card .t-meta{justify-content:flex-end;min-height:0;margin-bottom:11px;color:var(--text-dim);font-size:11px;}
   .progress-track{height:5px;background:#f2f4f7;}
   .task-card-facts{display:flex;flex-direction:column;gap:7px;padding-top:11px;border-top:1px solid #edf0f5;}
@@ -694,7 +712,7 @@
     todo: ["todo", "inprogress", "closed", "trash"],
     inprogress: ["todo", "inprogress", "pending", "done", "closed", "trash"],
     pending: ["inprogress", "pending", "done", "closed", "trash"],
-    done: ["pending", "done", "closed", "trash"],
+    done: ["inprogress", "pending", "done", "closed", "trash"],
     closed: ["done", "closed", "trash"],
     trash: ["trash", "todo", "inprogress", "pending", "done", "closed"]
   };
@@ -777,6 +795,24 @@
     var d = new Date(val);
     if(isNaN(d.getTime())) return null;
     return d.toISOString();
+  }
+  function fromDisplayDateTime(value){
+    var match = /^(\d{2})\/(\d{2})\/(\d{4})\s+([01]\d|2[0-3]):([0-5]\d)$/.exec((value || "").trim());
+    if(!match) return null;
+    var day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
+    var hour = Number(match[4]), minute = Number(match[5]);
+    var date = new Date(year, month - 1, day, hour, minute);
+    if(date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day ||
+       date.getHours() !== hour || date.getMinutes() !== minute) return null;
+    return date.toISOString();
+  }
+  function fromDisplayDate(value){
+    var match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec((value || "").trim());
+    if(!match) return null;
+    var date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 12);
+    if(date.getFullYear() !== Number(match[3]) || date.getMonth() !== Number(match[2]) - 1 ||
+       date.getDate() !== Number(match[1])) return null;
+    return dateKey(date);
   }
   function todayDateValue(){
     var d = new Date();
@@ -992,7 +1028,7 @@
       return t.recurrenceId === displayTask.recurrenceId && dateKey(occurrenceDateOf(t)) === dateKey(displayTask.occurrenceDate);
     });
     if(existing) return existing;
-    var createdAt = new Date(Math.min(Date.now(), new Date(displayTask.occurrenceDate).getTime())).toISOString();
+    var createdAt = new Date().toISOString();
     var created = {
       id: uid(),
       title: displayTask.title,
@@ -1258,16 +1294,17 @@
   }
 
   // ---------- task ops ----------
-  function addTask(title, status, createdAt, recurrenceId, persist){
+  function addTask(title, status, executionAt, recurrenceId, persist){
     title = (title||"").trim();
     if(!title) return;
-    var now = createdAt || new Date().toISOString();
+    var now = new Date().toISOString();
     var task = {
       id: uid(),
       title: title,
       description: "",
       status: status || "todo",
       createdAt: now,
+      occurrenceDate: executionAt || now,
       history: [{ at: now, from: null, to: status || "todo" }],
       reminderAt: null,
       reminderNotifiedAt: null,
@@ -1277,8 +1314,8 @@
     if(persist !== false) saveTasks();
     return task;
   }
-  function addTasksBulk(lines, status, createdAt){
-    lines.forEach(function(line){ addTask(line, status, createdAt, null, false); });
+  function addTasksBulk(lines, status, executionAt){
+    lines.forEach(function(line){ addTask(line, status, executionAt, null, false); });
     saveTasks();
   }
   function setStatus(taskId, newStatus){
@@ -1331,6 +1368,52 @@
     if(reminderAt !== task.reminderAt){
       task.reminderAt = reminderAt;
       task.reminderNotifiedAt = null; // đổi giờ nhắc mới thì cho phép báo lại
+    }
+    saveTasks();
+    return true;
+  }
+  function updateTaskExecutionDate(taskId, dateValue){
+    var task = getTaskById(taskId);
+    if(!task || task.isVirtual || isRecurringTask(task) || dateKey(occurrenceDateOf(task)) === dateValue) return false;
+    var previous = new Date(occurrenceDateOf(task));
+    var next = new Date(dateValue + "T12:00:00");
+    if(isNaN(next.getTime()) || dateKey(next) !== dateValue) return false;
+    next.setHours(previous.getHours(), previous.getMinutes(), previous.getSeconds(), previous.getMilliseconds());
+    task.occurrenceDate = next.toISOString();
+    saveTasks();
+    return true;
+  }
+  function updateTaskRecurrenceRule(taskId, rule){
+    var task = getTaskById(taskId);
+    if(!task || task.isVirtual || rule === (task.recurrenceRule || "none")) return false;
+    var seriesId = task.recurrenceId;
+    if(rule === "none"){
+      if(!seriesId) return false;
+      delete state.series[seriesId];
+      state.tasks.forEach(function(item){
+        if(item.recurrenceId !== seriesId) return;
+        item.recurrenceId = null;
+        item.recurrenceRule = null;
+        item.recurrenceStart = null;
+        item.recurrenceInitialStatus = null;
+      });
+    } else if(seriesId && state.series[seriesId]){
+      var definition = state.series[seriesId];
+      definition.rule = rule;
+      state.tasks.forEach(function(item){
+        if(item.recurrenceId === seriesId) item.recurrenceRule = rule;
+      });
+    } else {
+      seriesId = uid();
+      var start = occurrenceDateOf(task);
+      task.recurrenceId = seriesId;
+      task.recurrenceRule = rule;
+      task.recurrenceStart = start;
+      task.recurrenceInitialStatus = "todo";
+      state.series[seriesId] = {
+        title:task.title, description:task.description || "", rule:rule,
+        start:start, anchorDate:dateKey(start), initialStatus:"todo", excludedDates:[]
+      };
     }
     saveTasks();
     return true;
@@ -1413,8 +1496,8 @@
   function taskRelevantToRange(task, range){
     if(!range[0]) return true;
     if(isRecurringTask(task)) return inRange(occurrenceDateOf(task), range);
-    if(inRange(task.createdAt, range)) return true;
-    return task.history.some(function(h){ return inRange(h.at, range); });
+    if(inRange(occurrenceDateOf(task), range)) return true;
+    return task.history.some(function(h){ return h.from !== null && inRange(h.at, range); });
   }
   function taskDeletedInRange(task, range){
     if(task.status !== "trash") return false;
@@ -1517,6 +1600,12 @@
     Object.keys(attrs).forEach(function(k){ node.setAttribute(k, attrs[k]); });
     (children||[]).forEach(function(c){ if(c) node.appendChild(c); });
     return node;
+  }
+  function calendarIcon(){
+    return svgEl("svg", {viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", "stroke-width":"1.8", "stroke-linecap":"round", "stroke-linejoin":"round", "aria-hidden":"true"}, [
+      svgEl("rect", {x:"3", y:"5", width:"18", height:"16", rx:"2"}),
+      svgEl("path", {d:"M7 3v4M17 3v4M3 10h18"})
+    ]);
   }
   function buildStatusDonut(sourceTasks){
     sourceTasks = sourceTasks || state.tasks;
@@ -1846,8 +1935,8 @@
         if(timing.startAt) addFact("Bắt đầu", fmtDateTime(timing.startAt));
         if(timing.endAt) addFact("Kết thúc", fmtDateTime(timing.endAt));
       }
-      if(timing.inprogressMs !== null) addFact("Tổng thực hiện", task.status === "inprogress" ? liveDurationText(timing.inprogressMs) : durationText(timing.inprogressMs), task.status === "inprogress" ? "totalInprogress" : null);
-      if(timing.pendingMs !== null) addFact("Tổng chờ phê duyệt", task.status === "pending" ? liveDurationText(timing.pendingMs) : durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
+      if(timing.inprogressMs !== null && task.status !== "pending") addFact("Tổng thực hiện", task.status === "inprogress" ? liveDurationText(timing.inprogressMs) : durationText(timing.inprogressMs), task.status === "inprogress" ? "totalInprogress" : null);
+      if(timing.pendingMs !== null && task.status !== "inprogress") addFact("Tổng chờ phê duyệt", task.status === "pending" ? liveDurationText(timing.pendingMs) : durationText(timing.pendingMs), task.status === "pending" ? "totalPending" : null);
       if(isTrash && timing.deletedAt) addFact("Chuyển vào rác", fmtDateTime(timing.deletedAt));
       card.appendChild(facts);
       var recurrenceText = recurrenceLabel(task);
@@ -1862,19 +1951,91 @@
       }
     }
     var workColumns = {};
+    function beginInlineCardEdit(card, field){
+      var task = getTaskById(card.getAttribute("data-task-id"));
+      if(!task || card.dataset.inlineEditing === "true") return;
+      var target = card.querySelector(field === "title" ? ".t-title" : ".t-description");
+      if(!target) return;
+      card.dataset.inlineEditing = "true";
+      card.draggable = false;
+      var editor = el("div", {class:"task-card-inline-editor"});
+      var input = el(field === "title" ? "input" : "textarea", field === "title"
+        ? {type:"text", value:task.title, "aria-label":"Sửa tên công việc"}
+        : {"aria-label":"Sửa mô tả công việc", placeholder:"Nhập mô tả công việc..."});
+      if(field !== "title") input.value = task.description || "";
+      var error = el("div", {class:"field-error"}, ["Tên công việc không được để trống."]);
+      var actions = el("div", {class:"task-card-inline-editor-actions"});
+      var saveButton = el("button", {type:"button", class:"inline-save", "aria-label":"Lưu sửa nhanh"}, ["Lưu"]);
+      var cancelButton = el("button", {type:"button", "aria-label":"Hủy sửa nhanh"}, ["Hủy"]);
+      function finish(updatedTask){
+        card.draggable = true;
+        delete card.dataset.inlineEditing;
+        card.setAttribute("data-task-id", updatedTask.id);
+        card.setAttribute("data-virtual", updatedTask.isVirtual ? "true" : "false");
+        renderWorkCardContents(card, updatedTask, STATUS_MAP[updatedTask.status], updatedTask.status === "trash");
+        var column = card.closest(".column,.trash-column");
+        if(column && !column.classList.contains("trash-column")){
+          applyColumnSearch(column, state.workSearchByStatus[updatedTask.status]);
+        }
+      }
+      function save(){
+        var value = input.value.trim();
+        if(field === "title" && !value){ error.classList.add("show"); input.focus(); return; }
+        updateTaskFields(task.id, field === "title" ? value : task.title,
+          field === "description" ? value : (task.description || ""), task.reminderAt || null);
+        finish(getTaskById(task.id) || task);
+      }
+      editor.addEventListener("click", function(event){ event.stopPropagation(); });
+      editor.addEventListener("dblclick", function(event){ event.stopPropagation(); });
+      input.addEventListener("input", function(){ error.classList.remove("show"); });
+      input.addEventListener("keydown", function(event){
+        event.stopPropagation();
+        if(event.key === "Escape"){ event.preventDefault(); finish(task); }
+        if(event.key === "Enter" && (field === "title" || event.ctrlKey || event.metaKey)){
+          event.preventDefault(); save();
+        }
+      });
+      saveButton.addEventListener("click", save);
+      cancelButton.addEventListener("click", function(){ finish(task); });
+      actions.appendChild(saveButton);
+      actions.appendChild(cancelButton);
+      editor.appendChild(input);
+      editor.appendChild(error);
+      editor.appendChild(actions);
+      target.replaceWith(editor);
+      input.focus();
+      if(field === "title") input.select();
+    }
     function buildWorkTaskCard(t, colDef){
       var card = el("div", {
         class:"task-card", draggable:"true", "data-task-id":t.id,
         "data-task-title":t.title.toLowerCase(), "data-virtual":t.isVirtual ? "true" : "false",
         role:"button", tabindex:"0", "aria-label":"Mở công việc " + t.title + " ngày " + fmtDate(occurrenceDateOf(t))
       });
+      var openTimer = null;
       card.addEventListener("dragstart", function(e){
+        clearTimeout(openTimer);
         e.dataTransfer.setData("text/plain", card.getAttribute("data-task-id"));
         setTimeout(function(){ card.classList.add("dragging"); }, 0);
       });
       card.addEventListener("dragend", function(){ card.classList.remove("dragging"); });
-      card.addEventListener("click", function(){ openTaskDetail(card.getAttribute("data-task-id")); });
+      card.addEventListener("click", function(event){
+        if(card.dataset.inlineEditing === "true") return;
+        if(event.detail > 1){ clearTimeout(openTimer); return; }
+        var editable = event.target.closest(".t-title,.t-description");
+        if(!editable || event.detail === 0){ openTaskDetail(card.getAttribute("data-task-id")); return; }
+        clearTimeout(openTimer);
+        openTimer = setTimeout(function(){ openTaskDetail(card.getAttribute("data-task-id")); }, 320);
+      });
+      card.addEventListener("dblclick", function(event){
+        var editable = event.target.closest(".t-title,.t-description");
+        if(!editable) return;
+        event.preventDefault();
+        clearTimeout(openTimer);
+        beginInlineCardEdit(card, editable.classList.contains("t-title") ? "title" : "description");
+      });
       card.addEventListener("keydown", function(e){
+        if(card.dataset.inlineEditing === "true" || e.target.closest("input,textarea,button")) return;
         if(e.key === "Enter" || e.key === " "){ e.preventDefault(); openTaskDetail(card.getAttribute("data-task-id")); }
       });
       renderWorkCardContents(card, t, colDef, false);
@@ -2452,12 +2613,54 @@
     statusField.appendChild(statusTransitionError);
     row2.appendChild(statusField);
 
-    var createdField = el("div", {class:"field"});
-    createdField.appendChild(el("label", {}, [isRecurringTask(task) ? "Ngày thực hiện" : "Ngày tạo"]));
-    createdField.appendChild(el("input", {type:"text", value: fmtDateTime(occurrenceDateOf(task)), disabled:"disabled"}));
-    if(isRecurringTask(task)) createdField.appendChild(el("p", {class:"recurrence-note"}, [recurrenceLabel(task)]));
-    row2.appendChild(createdField);
+    var executionField = el("div", {class:"field execution-date-field"});
+    executionField.appendChild(el("label", {}, ["Ngày thực hiện"]));
+    var executionInput = el("input", {type:"text", value:fmtDate(occurrenceDateOf(task)), placeholder:"dd/mm/yyyy", inputmode:"numeric", "aria-label":"Ngày thực hiện (dd/mm/yyyy)"});
+    executionInput.disabled = !!task.isVirtual || isRecurringTask(task);
+    var executionPicker = el("input", {type:"date", class:"execution-native-picker", value:dateKey(occurrenceDateOf(task)), tabindex:"-1", "aria-hidden":"true"});
+    var executionPickerButton = el("button", {type:"button", class:"execution-picker-button", title:"Chọn ngày thực hiện", "aria-label":"Chọn ngày thực hiện"}, [calendarIcon()]);
+    executionPickerButton.disabled = executionInput.disabled;
+    executionPickerButton.addEventListener("click", function(){
+      var typedDate = fromDisplayDate(executionInput.value);
+      if(typedDate) executionPicker.value = typedDate;
+      if(executionPicker.showPicker) executionPicker.showPicker();
+      else executionPicker.click();
+    });
+    executionPicker.addEventListener("change", function(){
+      if(executionPicker.value) executionInput.value = fmtDate(new Date(executionPicker.value + "T12:00:00"));
+      executionError.classList.remove("show");
+    });
+    var executionControl = el("div", {class:"execution-date-control"}, [executionInput, executionPickerButton, executionPicker]);
+    executionField.appendChild(executionControl);
+    var executionError = el("div", {class:"field-error"}, ["Nhập ngày thực hiện dạng dd/mm/yyyy."]);
+    executionField.appendChild(executionError);
+    executionInput.addEventListener("input", function(){ executionError.classList.remove("show"); });
+    row2.appendChild(executionField);
     colLeft.appendChild(row2);
+
+    var scheduleRow = el("div", {class:"row2"});
+    var createdField = el("div", {class:"field created-date-field"});
+    createdField.appendChild(el("label", {}, ["Ngày tạo"]));
+    createdField.appendChild(el("input", {type:"text", value:task.isVirtual ? "—" : fmtDate(task.createdAt), disabled:"disabled"}));
+    scheduleRow.appendChild(createdField);
+    var recurrenceField = el("div", {class:"field"});
+    recurrenceField.appendChild(el("label", {}, ["Lịch lặp"]));
+    var recurrenceSelect = el("select", {class:"recurrence-rule-select", "aria-label":"Lịch lặp"});
+    [
+      {value:"none", label:"Không lặp"},
+      {value:"daily", label:"Hàng ngày"},
+      {value:"weekly", label:"Hàng tuần"},
+      {value:"monthly", label:"Hàng tháng"},
+      {value:"yearly", label:"Hằng năm"}
+    ].forEach(function(option){ recurrenceSelect.appendChild(el("option", {value:option.value}, [option.label])); });
+    recurrenceSelect.value = task.recurrenceRule || "none";
+    recurrenceSelect.disabled = !!task.isVirtual;
+    recurrenceField.appendChild(recurrenceSelect);
+    if(task.isVirtual) recurrenceField.appendChild(el("p", {class:"field-hint"}, ["Bản ảo dùng quy tắc của chuỗi; mở bản ghi thật để chỉnh."]));
+    else if(isRecurringTask(task)) recurrenceField.appendChild(el("p", {class:"field-hint"}, ["Đổi lịch lặp sẽ áp dụng cho cả chuỗi. Các bản ghi đã chỉnh sửa vẫn được giữ."]));
+    scheduleRow.appendChild(recurrenceField);
+    colLeft.appendChild(scheduleRow);
+    if(isRecurringTask(task)) colLeft.appendChild(el("p", {class:"recurrence-note"}, [recurrenceLabel(task)]));
 
     if(taskTimingSummary(task).pendingMs !== null){
       var approvalSection = el("div", {class:"detail-approval"}, [
@@ -2529,16 +2732,33 @@
       var historyTimeCell = el("div", {class:"history-time-cell"});
       var historyTimeText = el("span", {class:"h-time"}, [fmtDateTime(h.at)]);
       var historyTimeInput = el("input", {
-        type:"datetime-local",
+        type:"text",
         class:"history-time-input",
-        value:toDatetimeLocalValue(h.at),
-        title:"Chỉnh thời gian hoạt động"
+        value:fmtDateTime(h.at),
+        placeholder:"dd/mm/yyyy HH:mm",
+        inputmode:"numeric",
+        autocomplete:"off",
+        title:"Nhập theo định dạng dd/mm/yyyy HH:mm (24 giờ)"
+      });
+      var historyPicker = el("input", {type:"datetime-local", class:"history-native-picker", value:toDatetimeLocalValue(h.at), tabindex:"-1", "aria-hidden":"true"});
+      var historyPickerButton = el("button", {type:"button", class:"history-picker-btn", title:"Chọn ngày giờ", "aria-label":"Chọn ngày giờ hoạt động"}, [calendarIcon()]);
+      historyPickerButton.addEventListener("click", function(){
+        var typedIso = fromDisplayDateTime(historyTimeInput.value);
+        if(typedIso) historyPicker.value = toDatetimeLocalValue(typedIso);
+        if(historyPicker.showPicker) historyPicker.showPicker();
+        else historyPicker.click();
+      });
+      historyPicker.addEventListener("change", function(){
+        var iso = fromDatetimeLocalValue(historyPicker.value);
+        if(!iso) return;
+        historyTimeInput.value = fmtDateTime(iso);
+        historyTimeInput.dispatchEvent(new Event("input", {bubbles:true}));
       });
       var historyRowError = el("div", {class:"history-row-error"}, []);
       var historyEdit = {history:h, input:historyTimeInput, item:item, draftIso:h.at, error:historyRowError};
       historyEdits.push(historyEdit);
       historyTimeCell.appendChild(historyTimeText);
-      historyTimeCell.appendChild(historyTimeInput);
+      historyTimeCell.appendChild(el("div", {class:"history-time-editor"}, [historyTimeInput, historyPickerButton, historyPicker]));
       historyTimeCell.appendChild(historyRowError);
       item.appendChild(historyTimeCell);
       var historyStatusCell = el("div", {class:"history-status-cell"});
@@ -2565,7 +2785,8 @@
         var iso = historyEditIso(historyEdit);
         if(!iso) return;
         historyEdit.draftIso = iso;
-        historyTimeInput.value = toDatetimeLocalValue(iso);
+        historyTimeInput.value = fmtDateTime(iso);
+        historyPicker.value = toDatetimeLocalValue(iso);
         historyTimeText.textContent = fmtDateTime(iso);
         item.classList.toggle("is-draft", iso !== h.at);
         refreshDraftNotice();
@@ -2575,7 +2796,8 @@
         historyCancelButton.style.display = "none";
       });
       historyCancelButton.addEventListener("click", function(){
-        historyTimeInput.value = toDatetimeLocalValue(historyEdit.draftIso);
+        historyTimeInput.value = fmtDateTime(historyEdit.draftIso);
+        historyPicker.value = toDatetimeLocalValue(historyEdit.draftIso);
         historyTimeText.textContent = fmtDateTime(historyEdit.draftIso);
         item.classList.toggle("is-draft", historyEdit.draftIso !== h.at);
         refreshDraftNotice();
@@ -2596,8 +2818,8 @@
     histField.appendChild(histList);
     function historyEditIso(edit){
       var currentInputValue = edit.input.value;
-      var draftInputValue = toDatetimeLocalValue(edit.draftIso);
-      return currentInputValue === draftInputValue ? edit.draftIso : fromDatetimeLocalValue(currentInputValue);
+      var draftInputValue = fmtDateTime(edit.draftIso);
+      return currentInputValue === draftInputValue ? edit.draftIso : fromDisplayDateTime(currentInputValue);
     }
     function validateHistoryOrder(showError){
       var orderedHistoryTimes = task.history.map(function(history){
@@ -2620,7 +2842,7 @@
         if(!iso){
           valid = false;
           var emptyEdit = historyEdits.find(function(item){ return item.history === task.history[index]; });
-          markHistoryError(emptyEdit, "Vui lòng nhập thời gian.");
+          markHistoryError(emptyEdit, "Nhập thời gian dạng dd/mm/yyyy HH:mm (24 giờ).");
           return;
         }
         if(index > 0 && new Date(iso).getTime() < new Date(orderedHistoryTimes[index - 1]).getTime()){
@@ -2719,8 +2941,18 @@
         refreshStatusValidation();
         return;
       }
+      var executionDateValue = executionInput.disabled ? dateKey(occurrenceDateOf(task)) : fromDisplayDate(executionInput.value);
+      if(!executionDateValue){
+        executionError.classList.add("show");
+        executionInput.focus();
+        return;
+      }
       updateTaskHistoryTimes(task.id, historyTimes);
       updateTaskFields(task.id, titleInput.value.trim() || task.title, descArea.value, reminderIso);
+      if(!task.isVirtual){
+        updateTaskExecutionDate(task.id, executionDateValue);
+        updateTaskRecurrenceRule(task.id, recurrenceSelect.value);
+      }
       if(newStatus !== task.status){
         if(newStatus === "trash"){
           moveTaskToTrash(task.id, function(){ state.activeTaskId = null; });

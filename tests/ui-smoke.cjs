@@ -103,6 +103,7 @@ async function main() {
         const edit = await evaluate(`(() => { const item=document.querySelector('.history-item.is-editing'); const input=item.querySelector('.history-time-input'); return {inputWidth:input.getBoundingClientRect().width,itemWidth:item.clientWidth,scrollWidth:item.scrollWidth}; })()`);
         assert.ok(edit.inputWidth >= 130, `history time input too narrow at ${width}px`);
         assert.ok(edit.scrollWidth <= edit.itemWidth + 1, `history edit row overflows at ${width}px`);
+        assert.ok(await evaluate(`(() => { const input=document.querySelector('.history-item.is-editing .history-time-input'); return input.type==='text' && new RegExp('^[0-9]{2}/[0-9]{2}/[0-9]{4} [0-9]{2}:[0-9]{2}$').test(input.value); })()`), 'activity editor uses dd/mm/yyyy 24-hour time');
         const editShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
         fs.writeFileSync(`${outputDir}/detail-edit-${width}.png`, Buffer.from(editShot.data, 'base64'));
         if (width === 390) {
@@ -142,6 +143,7 @@ async function main() {
     await evaluate(`document.querySelector('.task-card[data-virtual="true"]').click()`);
     assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 1, 'mở bản ảo không lưu bản thật');
     assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-note').textContent`), 'Lặp: hàng ngày');
+    assert.equal(await evaluate(`document.querySelector('.modal-detail .recurrence-rule-select').disabled`), true, 'virtual occurrence cannot change repeat rule');
     await evaluate(`document.querySelector('.modal-detail .btn-danger').click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.modal-confirm.has-extra,.modal-confirm .confirm-extra').length`), 1, 'recurring delete offers a series action');
     const seriesConfirmShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -374,9 +376,8 @@ async function main() {
       return Object.fromEntries(Array.from(card.querySelectorAll('.task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent]));
     })()`);
     assert.equal(pendingBefore['Đang chờ phê duyệt'], '2 phút');
-    assert.equal(pendingBefore['Tổng thực hiện'], '3 phút');
     assert.equal(pendingBefore['Tổng chờ phê duyệt'], '4 phút');
-    assert.deepEqual(Object.keys(pendingBefore), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng thực hiện','Tổng chờ phê duyệt']);
+    assert.deepEqual(Object.keys(pendingBefore), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng chờ phê duyệt']);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const pendingAfter = await evaluate(`(() => {
@@ -387,9 +388,8 @@ async function main() {
     assert.equal(pendingAfter.sameBoard, true, 'live timer does not rebuild board');
     assert.equal(pendingAfter.sameCard, true, 'live timer does not rebuild card');
     assert.equal(pendingAfter.facts['Đang chờ phê duyệt'], '4 phút');
-    assert.equal(pendingAfter.facts['Tổng thực hiện'], '3 phút');
     assert.equal(pendingAfter.facts['Tổng chờ phê duyệt'], '6 phút');
-    assert.deepEqual(Object.keys(pendingAfter.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng thực hiện','Tổng chờ phê duyệt']);
+    assert.deepEqual(Object.keys(pendingAfter.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng chờ phê duyệt']);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; document.querySelector('[data-task-id="metric-pending"]').scrollIntoView({block:'center'}); })()`);
     const pendingShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/pending-realtime-320.png`, Buffer.from(pendingShot.data, 'base64'));
@@ -405,14 +405,13 @@ async function main() {
     assert.equal(resumed.live, 'true');
     assert.ok(resumed.labels.includes('Đang thực hiện'));
     assert.ok(!resumed.labels.includes('Đang chờ phê duyệt'));
-    assert.deepEqual(resumed.labels, ['Ngày thực hiện','Đang thực hiện','Tổng thực hiện','Tổng chờ phê duyệt']);
+    assert.deepEqual(resumed.labels, ['Ngày thực hiện','Đang thực hiện','Tổng thực hiện']);
     await evaluate(`(() => { window.__qaOriginalDateNow=Date.now; Date.now=()=>window.__qaOriginalDateNow()+120000; })()`);
     await new Promise(resolve => setTimeout(resolve, 1200));
     const resumedAfter = await evaluate(`(() => Object.fromEntries(Array.from(document.querySelectorAll('[data-task-id="metric-pending"] .task-card-fact')).map(row=>[row.querySelector('.task-card-fact-label').textContent,row.querySelector('.task-card-fact-value').textContent])))()`);
     assert.equal(resumedAfter['Đang thực hiện'], '2 phút');
     assert.equal(resumedAfter['Tổng thực hiện'], '5 phút');
-    assert.equal(resumedAfter['Tổng chờ phê duyệt'], '4 phút');
-    assert.deepEqual(Object.keys(resumedAfter), ['Ngày thực hiện','Đang thực hiện','Tổng thực hiện','Tổng chờ phê duyệt']);
+    assert.deepEqual(Object.keys(resumedAfter), ['Ngày thực hiện','Đang thực hiện','Tổng thực hiện']);
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
     const pendingAgain = await evaluate(`(() => {
       const transfer=new DataTransfer(); transfer.setData('text/plain','metric-pending');
@@ -423,7 +422,7 @@ async function main() {
     })()`);
     assert.equal(pendingAgain.sameBoard, true);
     assert.equal(pendingAgain.sameCard, true);
-    assert.deepEqual(Object.keys(pendingAgain.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng thực hiện','Tổng chờ phê duyệt']);
+    assert.deepEqual(Object.keys(pendingAgain.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng chờ phê duyệt']);
     assert.match(pendingAgain.facts['Đang chờ phê duyệt'], /^\d+ giây$/);
     await evaluate(`document.querySelector('[data-task-id="metric-pending"]').click()`);
     const detailApproval = await evaluate(`Array.from(document.querySelectorAll('.detail-approval .approval-timing-row strong')).map(node=>node.textContent)`);
@@ -485,6 +484,146 @@ async function main() {
     const approvalDetailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/approval-detail-320.png`, Buffer.from(approvalDetailShot.data, 'base64'));
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
+
+    await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 1, mobile: true });
+    await evaluate(`(() => {
+      const now=new Date();
+      const created=new Date(now.getFullYear(),now.getMonth(),now.getDate()-1,9).toISOString();
+      const due=new Date(now.getFullYear(),now.getMonth(),now.getDate(),12).toISOString();
+      const at=hour=>new Date(now.getFullYear(),now.getMonth(),now.getDate(),hour).toISOString();
+      localStorage.setItem('tqm_tasks_v1',JSON.stringify([
+        {id:'qa-inline',title:'Tên ban đầu',description:'Mô tả ban đầu',status:'todo',createdAt:created,occurrenceDate:due,history:[{at:created,from:null,to:'todo'}],reminderAt:null,recurrenceId:null},
+        {id:'qa-done-return',title:'Việc đã xong',description:'',status:'done',createdAt:at(8),occurrenceDate:due,
+          history:[{at:at(8),from:null,to:'todo'},{at:at(9),from:'todo',to:'inprogress'},{at:at(10),from:'inprogress',to:'done'}],reminderAt:null,recurrenceId:null}
+      ]));
+      localStorage.setItem('tqm_series_v1','{}');
+    })()`);
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    await evaluate(`document.getElementById('tab-work').click()`);
+    const inlineStart = await evaluate(`(() => {
+      const card=document.querySelector('[data-task-id="qa-inline"]');
+      window.__qaInlineCard=card;
+      const title=card.querySelector('.t-title');
+      title.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+      title.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:2}));
+      title.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,detail:2}));
+      return {editor:!!card.querySelector('.task-card-inline-editor input'),modal:!!document.querySelector('.modal-detail')};
+    })()`);
+    assert.deepEqual(inlineStart, {editor:true,modal:false}, 'double-click title edits inline');
+    await evaluate(`(() => {
+      const card=document.querySelector('[data-task-id="qa-inline"]');
+      const nameInput=card.querySelector('.task-card-inline-editor input');
+      nameInput.value='Tên đã sửa nhanh';
+      nameInput.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true,cancelable:true}));
+      nameInput.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+      const description=card.querySelector('.t-description');
+      description.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+      description.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:2}));
+      description.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,detail:2}));
+      card.querySelector('.task-card-inline-editor textarea').value='Mô tả đã sửa nhanh';
+      card.querySelector('.task-card-inline-editor textarea').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',ctrlKey:true,bubbles:true,cancelable:true}));
+    })()`);
+    const inlineSaved = await evaluate(`(() => {
+      const card=document.querySelector('[data-task-id="qa-inline"]');
+      const task=JSON.parse(localStorage.getItem('tqm_tasks_v1')).find(item=>item.id==='qa-inline');
+      return {sameCard:card===window.__qaInlineCard,title:card.querySelector('.t-title').textContent,description:card.querySelector('.t-description').textContent,
+        savedTitle:task.title,savedDescription:task.description,modal:!!document.querySelector('.modal-detail')};
+    })()`);
+    assert.deepEqual(inlineSaved, {sameCard:true,title:'Tên đã sửa nhanh',description:'Mô tả đã sửa nhanh',savedTitle:'Tên đã sửa nhanh',savedDescription:'Mô tả đã sửa nhanh',modal:false});
+    await evaluate(`(() => {
+      const title=document.querySelector('[data-task-id="qa-inline"] .t-title');
+      title.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+    })()`);
+    await new Promise(resolve => setTimeout(resolve, 380));
+    assert.ok(await evaluate(`!!document.querySelector('.modal-detail')`), 'single click still opens detail');
+    const separateDates = await evaluate(`(() => {
+      const modal=document.querySelector('.modal-detail');
+      return {execution:modal.querySelector('.execution-date-field input[type=text]').value,
+        created:modal.querySelector('.created-date-field input').value,
+        recurrenceDisabled:modal.querySelector('.recurrence-rule-select').disabled};
+    })()`);
+    assert.notEqual(separateDates.execution, separateDates.created, 'execution and creation dates are distinct');
+    assert.match(separateDates.created, /^[0-9]{2}\/[0-9]{2}\/[0-9]{4}$/);
+    assert.equal(separateDates.recurrenceDisabled, false);
+    await evaluate(`(() => {
+      const now=new Date(); const next=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1,12);
+      const value=String(next.getDate()).padStart(2,'0')+'/'+String(next.getMonth()+1).padStart(2,'0')+'/'+next.getFullYear();
+      document.querySelector('.execution-date-field input[type=text]').value=value;
+      document.querySelector('.modal-detail .modal-footer .btn-primary').click();
+    })()`);
+    const movedDate = await evaluate(`(() => {
+      const task=JSON.parse(localStorage.getItem('tqm_tasks_v1')).find(item=>item.id==='qa-inline');
+      const card=document.querySelector('[data-task-id="qa-inline"]');
+      return {created:new Date(task.createdAt).toDateString(),execution:new Date(task.occurrenceDate).toDateString(),onToday:!!card && !card.classList.contains('search-hidden')};
+    })()`);
+    assert.notEqual(movedDate.created, movedDate.execution);
+    assert.equal(movedDate.onToday, false, 'scheduled task leaves the original day');
+    const returnedToWork = await evaluate(`(() => {
+      const transfer=new DataTransfer(); transfer.setData('text/plain','qa-done-return');
+      document.querySelectorAll('.column .card-list')[1].dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));
+      const task=JSON.parse(localStorage.getItem('tqm_tasks_v1')).find(item=>item.id==='qa-done-return');
+      return {status:task.status,lastFrom:task.history.at(-1).from,lastTo:task.history.at(-1).to,
+        inColumn:!!document.querySelectorAll('.column .card-list')[1].querySelector('[data-task-id="qa-done-return"]')};
+    })()`);
+    assert.deepEqual(returnedToWork, {status:'inprogress',lastFrom:'done',lastTo:'inprogress',inColumn:true});
+    await evaluate(`document.querySelector('.period-arrow[title="Kỳ sau"]').click()`);
+    assert.ok(await evaluate(`!document.querySelector('[data-task-id="qa-inline"]').classList.contains('search-hidden')`), 'task appears on new execution day');
+    await evaluate(`document.querySelector('[data-task-id="qa-inline"]').click()`);
+    await evaluate(`(() => {
+      document.querySelector('.recurrence-rule-select').value='daily';
+      document.querySelector('.modal-detail .modal-footer .btn-primary').click();
+    })()`);
+    const seriesCreated = await evaluate(`(() => {
+      const task=JSON.parse(localStorage.getItem('tqm_tasks_v1')).find(item=>item.id==='qa-inline');
+      const series=JSON.parse(localStorage.getItem('tqm_series_v1'));
+      return {rule:task.recurrenceRule,count:Object.keys(series).length,definition:series[task.recurrenceId]?.rule};
+    })()`);
+    assert.deepEqual(seriesCreated, {rule:'daily',count:1,definition:'daily'});
+    await evaluate(`document.querySelector('.period-arrow[title="Kỳ sau"]').click()`);
+    assert.ok(await evaluate(`!!document.querySelector('.task-card[data-virtual="true"]')`), 'repeat rule generates virtual next day');
+    await evaluate(`document.querySelector('.task-card[data-virtual="true"]').click()`);
+    assert.equal(await evaluate(`document.querySelector('.recurrence-rule-select').disabled`), true);
+    assert.equal(await evaluate(`document.querySelector('.created-date-field input').value`), '—');
+    await evaluate(`document.querySelector('.modal-detail .modal-header .icon-btn').click()`);
+    await evaluate(`document.querySelector('.period-arrow[title="Kỳ trước"]').click()`);
+    await evaluate(`document.querySelector('[data-task-id="qa-inline"]').click()`);
+    await evaluate(`(() => {
+      document.querySelector('.recurrence-rule-select').value='weekly';
+      document.querySelector('.modal-detail .modal-footer .btn-primary').click();
+    })()`);
+    assert.equal(await evaluate(`Object.values(JSON.parse(localStorage.getItem('tqm_series_v1')))[0].rule`), 'weekly');
+    await evaluate(`document.querySelector('.period-arrow[title="Kỳ sau"]').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.task-card[data-virtual="true"]').length`), 0, 'changed weekly rule removes daily virtual occurrence');
+    await evaluate(`(() => { for(let day=0;day<6;day++) document.querySelector('.period-arrow[title="Kỳ sau"]').click(); })()`);
+    assert.ok(await evaluate(`!!document.querySelector('.task-card[data-virtual="true"]:not(.search-hidden)')`), 'weekly occurrence appears seven days after root');
+    const virtualEdited = await evaluate(`(() => {
+      const card=document.querySelector('.task-card[data-virtual="true"]:not(.search-hidden)');
+      const title=card.querySelector('.t-title');
+      title.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+      title.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:2}));
+      title.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,detail:2}));
+      card.querySelector('.task-card-inline-editor input').value='Bản tuần sửa riêng';
+      card.querySelector('.inline-save').click();
+      const tasks=JSON.parse(localStorage.getItem('tqm_tasks_v1'));
+      return {real:card.getAttribute('data-virtual'),title:card.querySelector('.t-title').textContent,
+        root:tasks.find(item=>item.id==='qa-inline').title,override:tasks.find(item=>item.title==='Bản tuần sửa riêng')?.title};
+    })()`);
+    assert.deepEqual(virtualEdited, {real:'false',title:'Bản tuần sửa riêng',root:'Tên đã sửa nhanh',override:'Bản tuần sửa riêng'});
+    await evaluate(`(() => { for(let day=0;day<7;day++) document.querySelector('.period-arrow[title="Kỳ trước"]').click(); })()`);
+    await evaluate(`document.querySelector('[data-task-id="qa-inline"]').click()`);
+    await evaluate(`(() => {
+      document.querySelector('.recurrence-rule-select').value='none';
+      document.querySelector('.modal-detail .modal-footer .btn-primary').click();
+    })()`);
+    const detached = await evaluate(`(() => {
+      const tasks=JSON.parse(localStorage.getItem('tqm_tasks_v1'));
+      return {series:Object.keys(JSON.parse(localStorage.getItem('tqm_series_v1'))).length,
+        root:tasks.find(item=>item.id==='qa-inline')?.recurrenceId,
+        override:tasks.find(item=>item.title==='Bản tuần sửa riêng')?.recurrenceId,
+        count:tasks.length};
+    })()`);
+    assert.deepEqual(detached, {series:0,root:null,override:null,count:3}, 'turning off repeat keeps real occurrences');
   } finally {
     socket.close();
   }
