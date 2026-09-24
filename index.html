@@ -445,7 +445,6 @@
   .field{margin-bottom:15px;}
   .field label{margin-bottom:7px;color:#667085;font-size:10.5px;letter-spacing:.07em;}
   .field-hint{margin:7px 0 0;color:var(--text-dim);font-size:11px;line-height:1.45;}
-  .recurrence-note{margin:7px 0 0;color:var(--pink-dark);font-size:11px;font-weight:650;line-height:1.45;}
   .field input[type=text],.field input[type=date],.field input[type=datetime-local],.field textarea,.field select{padding:9px 10px;border:1px solid var(--border-strong);border-radius:8px;color:var(--text);font-size:13px;}
   .field input[type=text]:focus,.field input[type=date]:focus,.field input[type=datetime-local]:focus,.field textarea:focus,.field select:focus{border-color:var(--pink);box-shadow:0 0 0 3px rgba(216,27,96,.11);}
   .detail-notes{min-height:108px!important;resize:vertical;}
@@ -2656,11 +2655,9 @@
     recurrenceSelect.value = task.recurrenceRule || "none";
     recurrenceSelect.disabled = !!task.isVirtual;
     recurrenceField.appendChild(recurrenceSelect);
-    if(task.isVirtual) recurrenceField.appendChild(el("p", {class:"field-hint"}, ["Bản ảo dùng quy tắc của chuỗi; mở bản ghi thật để chỉnh."]));
-    else if(isRecurringTask(task)) recurrenceField.appendChild(el("p", {class:"field-hint"}, ["Đổi lịch lặp sẽ áp dụng cho cả chuỗi. Các bản ghi đã chỉnh sửa vẫn được giữ."]));
+    if(!task.isVirtual && isRecurringTask(task)) recurrenceField.appendChild(el("p", {class:"field-hint"}, ["Đổi lịch lặp sẽ áp dụng cho cả chuỗi. Các bản ghi đã chỉnh sửa vẫn được giữ."]));
     scheduleRow.appendChild(recurrenceField);
     colLeft.appendChild(scheduleRow);
-    if(isRecurringTask(task)) colLeft.appendChild(el("p", {class:"recurrence-note"}, [recurrenceLabel(task)]));
 
     if(taskTimingSummary(task).pendingMs !== null){
       var approvalSection = el("div", {class:"detail-approval"}, [
