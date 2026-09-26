@@ -453,7 +453,7 @@
   .custom-select-trigger{padding:7px 30px 7px 11px;font-size:13px;}
   .custom-select-menu{border-color:var(--border);border-radius:10px;box-shadow:0 12px 28px rgba(16,24,40,.14);}
   .custom-select-option{padding:8px 10px;font-size:12.5px;}
-  .history-field{margin:0!important;width:100%;}
+  .history-field{display:flex;flex:1;flex-direction:column;min-height:0;margin:0!important;width:100%;}
   .activity-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .activity-heading h3{flex:1;margin:0;color:var(--text);font-size:13px;font-weight:760;}
   .activity-count{display:grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:7px;background:#f7e6ed;color:var(--pink-dark);font-size:10.5px;font-weight:750;}
@@ -462,7 +462,9 @@
   .activity-help{margin:7px 0 13px;color:var(--text-dim);font-size:10.5px;line-height:1.45;}
   .activity-footer{display:flex;align-items:flex-start;gap:8px;margin-top:auto;padding:12px;border:1px solid #e7eaf2;border-radius:9px;background:#fff;color:var(--text-dim);font-size:10.5px;line-height:1.45;}
   .activity-footer-icon{display:grid;place-items:center;flex:0 0 17px;width:17px;height:17px;border-radius:50%;background:#f2e4ef;color:var(--pink-dark);font-size:10px;font-weight:800;}
-  .modal-detail .history-list{display:flex;flex-direction:column;gap:8px;max-height:min(420px,50dvh);margin:0;padding:0;border:0;overflow:auto;flex:0 1 auto;}
+  .modal-detail .history-list{display:flex;flex-direction:column;gap:8px;min-height:0;max-height:none;margin:0;padding:0 5px 0 0;border:0;overflow:auto;flex:1 1 0;scrollbar-width:thin;scrollbar-color:#cbd5e2 transparent;}
+  .modal-detail .history-list::-webkit-scrollbar{width:6px;}
+  .modal-detail .history-list::-webkit-scrollbar-thumb{border-radius:6px;background:#cbd5e2;}
   .modal-detail .history-item{position:relative;display:flex;align-items:center;gap:6px;min-height:46px;padding:10px 9px 10px 25px;border:1px solid var(--border);border-radius:10px;background:#fff;font-size:11px;white-space:nowrap;}
   .modal-detail .history-item::before{content:"";position:absolute;left:10px;top:19px;width:7px;height:7px;border-radius:50%;background:#d95282;box-shadow:0 0 0 3px #fce9f0;}
   .modal-detail .history-item:hover{background:#fff;border-color:#d5dce7;}
@@ -507,9 +509,17 @@
   .approval-timing{display:flex;flex-direction:column;gap:3px;min-width:150px;color:var(--text-dim);font-size:10.5px;line-height:1.4;}
   .approval-timing-row{display:flex;justify-content:space-between;gap:8px;}
   .approval-timing strong{color:var(--text);font-weight:700;text-align:right;white-space:nowrap;}
-  .detail-approval{min-width:0;margin:0 0 17px;padding:12px 14px;border:1px solid #e7ddfb;border-radius:10px;background:#faf7ff;}
-  .detail-approval .approval-timing{font-size:12px;gap:7px;}
-  .detail-approval .approval-timing-row{gap:12px;}
+  .carryover-trigger{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 16px;padding:11px 14px;border:1px solid #b7dfc9;border-radius:10px;background:#f2fbf6;color:#17663c;text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-sm);}
+  .carryover-trigger.has-tasks{border-color:#f1d388;background:#fffaeb;color:#805700;}
+  .carryover-trigger:hover{filter:brightness(.98);}
+  .carryover-trigger:focus-visible{outline:2px solid var(--pink);outline-offset:2px;}
+  .carryover-trigger .carryover-icon{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#d8f3e3;font-size:13px;}
+  .carryover-trigger.has-tasks .carryover-icon{background:#fff0bd;}
+  .carryover-trigger .carryover-copy{flex:1;min-width:0;}
+  .carryover-trigger .carryover-arrow{font-size:15px;}
+  .carryover-modal .clickable-table table{min-width:620px;}
+  .carryover-modal .go-to-period{padding:7px 11px;border:1px solid #efd1dc;border-radius:8px;background:#fff7fa;color:var(--pink-dark);font:inherit;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;}
+  .carryover-modal .go-to-period:hover{background:var(--pink-soft);border-color:var(--pink);}
   .approval-table-cell{min-width:185px;}
   .report-table-scroll table{min-width:660px;}
   .report-todo-list table{min-width:740px;}
@@ -569,6 +579,7 @@
     .detail-tabs button.active{background:#fff;color:var(--pink-dark);box-shadow:0 1px 4px rgba(20,36,61,.09);}
     .modal-detail .modal-2col{display:block;}
     .modal-detail .modal-2col .col-left,.modal-detail .modal-2col .col-right{width:100%;}
+    .modal-detail .modal-2col .col-right{height:min(60dvh,520px);}
     .modal-detail .modal-2col:not(.activity-active) .col-right{display:none;}
     .modal-detail .modal-2col.activity-active .col-left{display:none;}
   }
@@ -635,6 +646,12 @@
     .summary-list-modal .modal-body{padding:14px 16px;}
     .modal-reminder .modal-body{padding:4px 16px 12px;}
     .summary-list-modal table{min-width:780px;}
+    .carryover-modal .clickable-table table{width:100%;min-width:0;table-layout:fixed;}
+    .carryover-modal th:nth-child(1),.carryover-modal td:nth-child(1),.carryover-modal th:nth-child(3),.carryover-modal td:nth-child(3),.carryover-modal th:nth-child(5),.carryover-modal td:nth-child(5){display:none;}
+    .carryover-modal th:nth-child(2),.carryover-modal td:nth-child(2){overflow-wrap:anywhere;}
+    .carryover-modal th:nth-child(4),.carryover-modal td:nth-child(4){width:82px;white-space:normal!important;font-size:10px;}
+    .carryover-modal th:nth-child(6),.carryover-modal td:nth-child(6){width:70px;}
+    .carryover-modal .go-to-period{padding:6px 7px;font-size:10px;}
     .reminder-item{align-items:flex-start;flex-wrap:wrap;gap:8px;padding:13px 0;}
     .reminder-item-copy{flex-basis:100%;}
     .reminder-item .btn{margin-left:auto;}
@@ -1075,6 +1092,24 @@
       });
     });
     return result;
+  }
+  function previousUnfinishedTasks(range){
+    if(!range[0]) return [];
+    var cutoff = Math.min(range[0].getTime(), startOfDay(new Date()).getTime());
+    var starts = state.tasks.map(function(task){ return new Date(occurrenceDateOf(task)).getTime(); });
+    Object.keys(state.series).forEach(function(id){
+      var definition = state.series[id];
+      if(definition && definition.start) starts.push(new Date(definition.start).getTime());
+    });
+    starts = starts.filter(function(value){ return Number.isFinite(value) && value < cutoff; });
+    if(!starts.length) return [];
+    var earliest = starts.reduce(function(minimum, value){ return Math.min(minimum, value); }, Infinity);
+    var historyRange = [startOfDay(new Date(earliest)), new Date(cutoff - 1)];
+    return getDisplayTasks(historyRange).filter(function(task){
+      var date = new Date(occurrenceDateOf(task)).getTime();
+      return Number.isFinite(date) && date < cutoff &&
+        (task.status === "todo" || task.status === "inprogress" || task.status === "pending");
+    }).sort(function(a,b){ return new Date(occurrenceDateOf(b)) - new Date(occurrenceDateOf(a)); });
   }
   function normalizeRecurringTasks(persist){
     var groups = {};
@@ -1907,6 +1942,64 @@
     listModalRoot.innerHTML = "";
     listModalRoot.appendChild(overlay);
   }
+  function renderCarryoverModal(tasks){
+    var overlay = el("div", {class:"modal-overlay", style:"z-index:250;", onclick:function(e){ if(e.target === overlay) closeListModal(); }});
+    var box = el("div", {class:"modal summary-list-modal carryover-modal", role:"dialog", "aria-modal":"true", "aria-label":"Công việc chưa hoàn thành các kỳ trước"});
+    box.appendChild(dialogHeader("Công việc chưa hoàn thành các kỳ trước", tasks.length + " công việc cần theo dõi", "CÔNG VIỆC TỒN", closeListModal));
+    var body = el("div", {class:"modal-body"});
+    var search = el("input", {class:"summary-search", type:"search", placeholder:"Tìm theo tên công việc...", "aria-label":"Tìm công việc chưa hoàn thành"});
+    var tableWrap = el("div", {class:"clickable-table"});
+    body.appendChild(search);
+    body.appendChild(tableWrap);
+    box.appendChild(body);
+    function renderRows(list){
+      tableWrap.innerHTML = "";
+      if(!list.length){
+        tableWrap.appendChild(el("div", {class:"empty-hint"}, [tasks.length ? "Không tìm thấy công việc phù hợp." : "Không có công việc chưa hoàn thành từ các kỳ trước."]));
+        return;
+      }
+      var table = el("table");
+      table.appendChild(el("thead", {}, [el("tr", {}, [
+        el("th", {style:"width:42px;"}, ["STT"]),
+        el("th", {}, ["Tên công việc"]),
+        el("th", {}, ["Trạng thái"]),
+        el("th", {}, ["Ngày thực hiện"]),
+        el("th", {}, ["Lịch lặp"]),
+        el("th", {style:"width:92px;"}, ["Điều hướng"])
+      ])]));
+      var tbody = el("tbody");
+      list.forEach(function(task, index){
+        var row = el("tr");
+        row.appendChild(el("td", {}, [String(index + 1)]));
+        row.appendChild(el("td", {style:"font-weight:650;color:var(--text);"}, [task.title]));
+        row.appendChild(el("td", {}, [statusBadge(task.status)]));
+        row.appendChild(el("td", {style:"white-space:nowrap;"}, [fmtDate(occurrenceDateOf(task))]));
+        row.appendChild(el("td", {}, [recurrenceLabel(task) || "—"]));
+        row.appendChild(el("td", {}, [el("button", {type:"button", class:"go-to-period", "aria-label":"Đi tới kỳ của " + task.title, onclick:function(){
+          state.workAnchorDate = dateKey(occurrenceDateOf(task));
+          if(state.workPeriod === "custom"){
+            state.workPeriod = "today";
+            state.workFrom = null;
+            state.workTo = null;
+          }
+          closeListModal();
+          state.view = "work";
+          render();
+        }}, ["Đi tới"])]));
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+    }
+    renderRows(tasks);
+    search.addEventListener("input", function(){
+      var query = search.value.trim().toLowerCase();
+      renderRows(query ? tasks.filter(function(task){ return task.title.toLowerCase().indexOf(query) >= 0; }) : tasks);
+    });
+    overlay.appendChild(box);
+    listModalRoot.innerHTML = "";
+    listModalRoot.appendChild(overlay);
+  }
 
   function periodButtons(options, current, onSelect, viewKey){
     var wrap = document.createDocumentFragment();
@@ -1965,6 +2058,19 @@
       el("div", {}, [el("h2", {}, ["Công việc"]),
         el("p", {}, ["Theo dõi từng bước. Kéo thả hoặc mở thẻ để cập nhật trạng thái."])])
     ]));
+    var carryoverButton = el("button", {type:"button", class:"carryover-trigger", onclick:function(){ renderCarryoverModal(previousUnfinishedTasks(activeWorkRange)); }});
+    function refreshCarryover(){
+      var count = previousUnfinishedTasks(activeWorkRange).length;
+      carryoverButton.classList.toggle("has-tasks", count > 0);
+      carryoverButton.innerHTML = "";
+      carryoverButton.appendChild(el("span", {class:"carryover-icon", "aria-hidden":"true"}, [count ? "!" : "✓"]));
+      carryoverButton.appendChild(el("span", {class:"carryover-copy"}, [count
+        ? "Có " + count + " công việc chưa hoàn thành từ các kỳ trước"
+        : "Không có công việc chưa hoàn thành từ các kỳ trước"]));
+      carryoverButton.appendChild(el("span", {class:"carryover-arrow", "aria-hidden":"true"}, ["→"]));
+    }
+    refreshCarryover();
+    container.appendChild(carryoverButton);
 
     var toolbar = el("div", {class:"toolbar"});
     toolbar.appendChild(periodButtons([
@@ -2346,6 +2452,7 @@
     state.workViewApi = {
       setPeriod:function(period){
         activeWorkRange = getRange(period, state.workFrom, state.workTo, state.workAnchorDate);
+        refreshCarryover();
         var periodKeys = ["today", "week", "month", "year"];
         toolbar.querySelectorAll(".period-quick-button").forEach(function(button, index){
           button.className = "period-quick-button" + (periodKeys[index] === period ? " active" : "");
@@ -2359,6 +2466,7 @@
       },
       refreshDate:function(){
         activeWorkRange = getRange(state.workPeriod, state.workFrom, state.workTo, state.workAnchorDate);
+        refreshCarryover();
         var periodKeys = ["today", "week", "month", "year"];
         toolbar.querySelectorAll(".period-quick-button").forEach(function(button, index){
           button.className = "period-quick-button" + (periodKeys[index] === state.workPeriod ? " active" : "");
@@ -2372,6 +2480,7 @@
       },
       refreshRange:function(){
         activeWorkRange = getRange(state.workPeriod, state.workFrom, state.workTo, state.workAnchorDate);
+        refreshCarryover();
         syncWorkBoardTasks();
         board.querySelectorAll(".column,.trash-column").forEach(function(column){
           var key = column.querySelector(".column-search");
@@ -2751,14 +2860,6 @@
     recurrenceField.appendChild(recurrenceSelect);
     scheduleRow.appendChild(recurrenceField);
     colLeft.appendChild(scheduleRow);
-
-    if(taskTimingSummary(task).pendingMs !== null){
-      var approvalSection = el("div", {class:"detail-approval"}, [
-        el("div", {class:"detail-section-title"}, ["Thời gian phê duyệt"]),
-        approvalTimingView(task)
-      ]);
-      colLeft.appendChild(approvalSection);
-    }
 
     var reminderField = el("div", {class:"field"});
     reminderField.appendChild(el("label", {}, ["Nhắc nhở"]));

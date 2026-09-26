@@ -94,6 +94,16 @@ async function main() {
       if (width === 1024) assert.ok(detail.right - detail.left >= 980, 'detail modal uses available laptop width');
       const detailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       fs.writeFileSync(`${outputDir}/detail-${width}.png`, Buffer.from(detailShot.data, 'base64'));
+      assert.equal(await evaluate(`document.querySelector('.modal-detail .detail-approval') === null`), true, 'detail no longer has a separate approval block');
+      if (width === 1440) {
+        const activityLayout = await evaluate(`(() => {
+          const list=document.querySelector('.modal-detail .history-list');
+          const footer=document.querySelector('.modal-detail .activity-footer');
+          return {height:list.getBoundingClientRect().height,gap:footer.getBoundingClientRect().top-list.getBoundingClientRect().bottom};
+        })()`);
+        console.log('activity layout:', activityLayout);
+        assert.ok(activityLayout.height > 300 && activityLayout.gap <= 20, 'history list fills available space down to activity footer');
+      }
       if (width <= 820) {
         await evaluate(`document.querySelector('.detail-tabs button:nth-child(2)').click()`);
         assert.equal(await evaluate(`document.querySelector('.detail-tabs button:nth-child(2)').getAttribute('aria-selected')`), 'true');
@@ -118,6 +128,59 @@ async function main() {
         assert.equal(await evaluate(`document.querySelectorAll('.history-row-error.show').length`), 0);
       }
     }
+    await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+    await evaluate(`(() => {
+      const at=index=>new Date(Date.now()-(30-index)*3600000).toISOString();
+      const history=Array.from({length:30},(_,index)=>({at:at(index),from:index ? 'inprogress' : null,to:'inprogress'}));
+      localStorage.setItem('tqm_tasks_v1',JSON.stringify([{id:'qa-long-history',title:'Hoạt động dài',description:'',status:'inprogress',createdAt:at(0),occurrenceDate:new Date().toISOString(),history,reminderAt:null,recurrenceId:null}]));
+      localStorage.setItem('tqm_series_v1','{}');
+    })()`);
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    await evaluate(`document.getElementById('tab-work').click(); document.querySelector('[data-task-id="qa-long-history"]').click()`);
+    const longHistory = await evaluate(`(() => {
+      const list=document.querySelector('.modal-detail .history-list');
+      const footer=document.querySelector('.modal-detail .activity-footer');
+      const box=document.querySelector('.modal-detail');
+      list.scrollTop=list.scrollHeight;
+      return {scrollable:list.scrollHeight>list.clientHeight,scrolled:list.scrollTop>0,
+        footerVisible:footer.getBoundingClientRect().bottom<=box.getBoundingClientRect().bottom};
+    })()`);
+    assert.deepEqual(longHistory, {scrollable:true,scrolled:true,footerVisible:true}, 'long activity history scrolls inside the detail panel');
+    await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 900, deviceScaleFactor: 1, mobile: true });
+    await evaluate(`document.querySelector('.detail-tabs button:nth-child(2)').click()`);
+    assert.equal(await evaluate(`(() => { const list=document.querySelector('.modal-detail .history-list'); return list.scrollHeight>list.clientHeight; })()`), true, 'long activity history also scrolls inside mobile detail');
+    await evaluate(`(() => {
+      const day=offset=>new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()+offset,12).toISOString();
+      const tasks=[
+        {id:'qa-carry-pending',title:'Đợi duyệt kỳ cũ',status:'pending',createdAt:day(-3),occurrenceDate:day(-3)},
+        {id:'qa-carry-todo',title:'Việc chưa bắt đầu',status:'todo',createdAt:day(-2),occurrenceDate:day(-2)},
+        {id:'qa-carry-done',title:'Việc đã xong',status:'done',createdAt:day(-4),occurrenceDate:day(-4)},
+        {id:'qa-carry-future',title:'Việc tương lai',status:'todo',createdAt:day(1),occurrenceDate:day(1)},
+        {id:'qa-carry-series',title:'Lịch lặp tồn',status:'todo',createdAt:day(-1),occurrenceDate:day(-1),recurrenceId:'qa-carry-rule',recurrenceRule:'daily',recurrenceStart:day(-1),recurrenceInitialStatus:'todo'}
+      ].map(task=>({...task,description:'',history:[{at:task.createdAt,from:null,to:task.status}],reminderAt:null}));
+      localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks));
+      localStorage.setItem('tqm_series_v1',JSON.stringify({'qa-carry-rule':{title:'Lịch lặp tồn',description:'',rule:'daily',start:day(-1),createdAt:day(-1),anchorDate:day(-1).slice(0,10),initialStatus:'todo',excludedDates:[]}}));
+    })()`);
+    await send('Page.navigate', { url: targetUrl });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    await evaluate(`document.getElementById('tab-work').click()`);
+    assert.match(await evaluate(`document.querySelector('.carryover-trigger').textContent`), /Có 3 công việc/);
+    assert.equal(await evaluate(`document.querySelector('.carryover-trigger').classList.contains('has-tasks')`), true);
+    await evaluate(`document.querySelector('.carryover-trigger').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('.carryover-modal tbody tr').length`), 3, 'table shows only prior unfinished occurrences');
+    assert.equal(await evaluate(`document.querySelectorAll('.carryover-modal thead th').length`), 6);
+    assert.equal(await evaluate(`document.body.scrollWidth <= innerWidth + 1`), true, 'carryover table scrolls inside mobile modal');
+    const carryoverShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    fs.writeFileSync(`${outputDir}/carryover-table-320.png`, Buffer.from(carryoverShot.data, 'base64'));
+    assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 5, 'viewing virtual carryover does not create records');
+    await evaluate(`document.querySelector('.carryover-modal .summary-search').value='Đợi duyệt'; document.querySelector('.carryover-modal .summary-search').dispatchEvent(new Event('input',{bubbles:true}))`);
+    assert.equal(await evaluate(`document.querySelectorAll('.carryover-modal tbody tr').length`), 1);
+    await evaluate(`document.querySelector('.carryover-modal .go-to-period').click()`);
+    assert.equal(await evaluate(`document.querySelector('.carryover-modal') === null`), true, 'going to period closes the table');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-pending"]:not(.search-hidden)')`), true, 'go to opens the task period');
+    assert.equal(await evaluate(`document.querySelector('.carryover-trigger').classList.contains('has-tasks')`), false, 'prior-period indicator refreshes after navigation');
+    console.log('carryover table and navigation: OK');
     await send('Emulation.setDeviceMetricsOverride', {
       width: 390, height: 900, deviceScaleFactor: 1, mobile: true,
     });
@@ -436,9 +499,7 @@ async function main() {
     assert.deepEqual(Object.keys(pendingAgain.facts), ['Ngày thực hiện','Đang chờ phê duyệt','Tổng chờ phê duyệt']);
     assert.match(pendingAgain.facts['Đang chờ phê duyệt'], /^\d+ giây$/);
     await evaluate(`document.querySelector('[data-task-id="metric-pending"]').click()`);
-    const detailApproval = await evaluate(`Array.from(document.querySelectorAll('.detail-approval .approval-timing-row strong')).map(node=>node.textContent)`);
-    assert.match(detailApproval[0], /^\d+ giây$/);
-    assert.equal(detailApproval[1], '4 phút', 'detail retains total waiting across approval rounds');
+    assert.equal(await evaluate(`document.querySelector('.detail-approval') === null`), true);
 
     await evaluate(`(() => {
       const now=Date.now();
@@ -490,8 +551,7 @@ async function main() {
     assert.equal(await evaluate(`document.querySelectorAll('.summary-list-modal tbody tr').length`), 1);
     assert.equal(await evaluate(`document.querySelector('.summary-list-modal .approval-timing-row strong').textContent`), approvalReportAfter.values[0]);
     await evaluate(`document.querySelector('.summary-list-modal tbody tr').click()`);
-    assert.equal(await evaluate(`document.querySelectorAll('.detail-approval .approval-timing-row').length`), 2);
-    assert.equal(await evaluate(`document.querySelector('.detail-approval .approval-timing-row strong').textContent`), '12 giờ');
+    assert.equal(await evaluate(`document.querySelector('.detail-approval') === null`), true);
     const approvalDetailShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(`${outputDir}/approval-detail-320.png`, Buffer.from(approvalDetailShot.data, 'base64'));
     await evaluate(`(() => { Date.now=window.__qaOriginalDateNow; delete window.__qaOriginalDateNow; })()`);
