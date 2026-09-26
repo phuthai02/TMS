@@ -156,31 +156,20 @@ async function main() {
         {id:'qa-carry-pending',title:'Đợi duyệt kỳ cũ',status:'pending',createdAt:day(-3),occurrenceDate:day(-3)},
         {id:'qa-carry-todo',title:'Việc chưa bắt đầu',status:'todo',createdAt:day(-2),occurrenceDate:day(-2)},
         {id:'qa-carry-done',title:'Việc đã xong',status:'done',createdAt:day(-4),occurrenceDate:day(-4)},
-        {id:'qa-carry-future',title:'Việc tương lai',status:'todo',createdAt:day(1),occurrenceDate:day(1)},
-        {id:'qa-carry-series',title:'Lịch lặp tồn',status:'todo',createdAt:day(-1),occurrenceDate:day(-1),recurrenceId:'qa-carry-rule',recurrenceRule:'daily',recurrenceStart:day(-1),recurrenceInitialStatus:'todo'}
+        {id:'qa-carry-future',title:'Việc tương lai',status:'todo',createdAt:day(1),occurrenceDate:day(1)}
       ].map(task=>({...task,description:'',history:[{at:task.createdAt,from:null,to:task.status}],reminderAt:null}));
       localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks));
-      localStorage.setItem('tqm_series_v1',JSON.stringify({'qa-carry-rule':{title:'Lịch lặp tồn',description:'',rule:'daily',start:day(-1),createdAt:day(-1),anchorDate:day(-1).slice(0,10),initialStatus:'todo',excludedDates:[]}}));
+      localStorage.setItem('tqm_series_v1','{}');
     })()`);
     await send('Page.navigate', { url: targetUrl });
     await new Promise(resolve => setTimeout(resolve, 350));
     await evaluate(`document.getElementById('tab-work').click()`);
-    assert.match(await evaluate(`document.querySelector('.carryover-trigger').textContent`), /Có 3 công việc/);
-    assert.equal(await evaluate(`document.querySelector('.carryover-trigger').classList.contains('has-tasks')`), true);
-    await evaluate(`document.querySelector('.carryover-trigger').click()`);
-    assert.equal(await evaluate(`document.querySelectorAll('.carryover-modal tbody tr').length`), 3, 'table shows only prior unfinished occurrences');
-    assert.equal(await evaluate(`document.querySelectorAll('.carryover-modal thead th').length`), 6);
-    assert.equal(await evaluate(`document.body.scrollWidth <= innerWidth + 1`), true, 'carryover table scrolls inside mobile modal');
-    const carryoverShot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
-    fs.writeFileSync(`${outputDir}/carryover-table-320.png`, Buffer.from(carryoverShot.data, 'base64'));
-    assert.equal(await evaluate(`JSON.parse(localStorage.getItem('tqm_tasks_v1')).length`), 5, 'viewing virtual carryover does not create records');
-    await evaluate(`document.querySelector('.carryover-modal .summary-search').value='Đợi duyệt'; document.querySelector('.carryover-modal .summary-search').dispatchEvent(new Event('input',{bubbles:true}))`);
-    assert.equal(await evaluate(`document.querySelectorAll('.carryover-modal tbody tr').length`), 1);
-    await evaluate(`document.querySelector('.carryover-modal .go-to-period').click()`);
-    assert.equal(await evaluate(`document.querySelector('.carryover-modal') === null`), true, 'going to period closes the table');
-    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-pending"]:not(.search-hidden)')`), true, 'go to opens the task period');
-    assert.equal(await evaluate(`document.querySelector('.carryover-trigger').classList.contains('has-tasks')`), false, 'prior-period indicator refreshes after navigation');
-    console.log('carryover table and navigation: OK');
+    assert.equal(await evaluate(`document.querySelector('.carryover-trigger')`), null, 'carryover indicator was removed');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-pending"]:not(.search-hidden)')`), true, 'past pending task stays visible under the "today" period');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-todo"]:not(.search-hidden)')`), true, 'past todo task stays visible under the "today" period');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-future"]:not(.search-hidden)')`), true, 'future todo task stays visible under the "today" period');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-done"].search-hidden')`), true, 'done task from another period is still hidden by the period filter');
+    console.log('non-done columns ignore the period filter, done column still respects it: OK');
     await send('Emulation.setDeviceMetricsOverride', {
       width: 390, height: 900, deviceScaleFactor: 1, mobile: true,
     });

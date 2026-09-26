@@ -509,17 +509,6 @@
   .approval-timing{display:flex;flex-direction:column;gap:3px;min-width:150px;color:var(--text-dim);font-size:10.5px;line-height:1.4;}
   .approval-timing-row{display:flex;justify-content:space-between;gap:8px;}
   .approval-timing strong{color:var(--text);font-weight:700;text-align:right;white-space:nowrap;}
-  .carryover-trigger{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 16px;padding:11px 14px;border:1px solid #b7dfc9;border-radius:10px;background:#f2fbf6;color:#17663c;text-align:left;font:inherit;font-size:12px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-sm);}
-  .carryover-trigger.has-tasks{border-color:#f1d388;background:#fffaeb;color:#805700;}
-  .carryover-trigger:hover{filter:brightness(.98);}
-  .carryover-trigger:focus-visible{outline:2px solid var(--pink);outline-offset:2px;}
-  .carryover-trigger .carryover-icon{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:#d8f3e3;font-size:13px;}
-  .carryover-trigger.has-tasks .carryover-icon{background:#fff0bd;}
-  .carryover-trigger .carryover-copy{flex:1;min-width:0;}
-  .carryover-trigger .carryover-arrow{font-size:15px;}
-  .carryover-modal .clickable-table table{min-width:620px;}
-  .carryover-modal .go-to-period{padding:7px 11px;border:1px solid #efd1dc;border-radius:8px;background:#fff7fa;color:var(--pink-dark);font:inherit;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;}
-  .carryover-modal .go-to-period:hover{background:var(--pink-soft);border-color:var(--pink);}
   .approval-table-cell{min-width:185px;}
   .report-table-scroll table{min-width:660px;}
   .report-todo-list table{min-width:740px;}
@@ -646,12 +635,6 @@
     .summary-list-modal .modal-body{padding:14px 16px;}
     .modal-reminder .modal-body{padding:4px 16px 12px;}
     .summary-list-modal table{min-width:780px;}
-    .carryover-modal .clickable-table table{width:100%;min-width:0;table-layout:fixed;}
-    .carryover-modal th:nth-child(1),.carryover-modal td:nth-child(1),.carryover-modal th:nth-child(3),.carryover-modal td:nth-child(3),.carryover-modal th:nth-child(5),.carryover-modal td:nth-child(5){display:none;}
-    .carryover-modal th:nth-child(2),.carryover-modal td:nth-child(2){overflow-wrap:anywhere;}
-    .carryover-modal th:nth-child(4),.carryover-modal td:nth-child(4){width:82px;white-space:normal!important;font-size:10px;}
-    .carryover-modal th:nth-child(6),.carryover-modal td:nth-child(6){width:70px;}
-    .carryover-modal .go-to-period{padding:6px 7px;font-size:10px;}
     .reminder-item{align-items:flex-start;flex-wrap:wrap;gap:8px;padding:13px 0;}
     .reminder-item-copy{flex-basis:100%;}
     .reminder-item .btn{margin-left:auto;}
@@ -963,6 +946,10 @@
     return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
   }
   function occurrenceDateOf(task){ return task.occurrenceDate || task.createdAt; }
+  function statusEnteredAt(task){
+    var history = Array.isArray(task.history) ? task.history : [];
+    return (history.length ? history[history.length - 1].at : null) || task.createdAt;
+  }
   function isRecurringTask(task){ return !!(task && task.recurrenceId && task.recurrenceRule); }
   function taskCreatedAt(task){
     var definition = isRecurringTask(task) && state.series[task.recurrenceId];
@@ -1092,24 +1079,6 @@
       });
     });
     return result;
-  }
-  function previousUnfinishedTasks(range){
-    if(!range[0]) return [];
-    var cutoff = Math.min(range[0].getTime(), startOfDay(new Date()).getTime());
-    var starts = state.tasks.map(function(task){ return new Date(occurrenceDateOf(task)).getTime(); });
-    Object.keys(state.series).forEach(function(id){
-      var definition = state.series[id];
-      if(definition && definition.start) starts.push(new Date(definition.start).getTime());
-    });
-    starts = starts.filter(function(value){ return Number.isFinite(value) && value < cutoff; });
-    if(!starts.length) return [];
-    var earliest = starts.reduce(function(minimum, value){ return Math.min(minimum, value); }, Infinity);
-    var historyRange = [startOfDay(new Date(earliest)), new Date(cutoff - 1)];
-    return getDisplayTasks(historyRange).filter(function(task){
-      var date = new Date(occurrenceDateOf(task)).getTime();
-      return Number.isFinite(date) && date < cutoff &&
-        (task.status === "todo" || task.status === "inprogress" || task.status === "pending");
-    }).sort(function(a,b){ return new Date(occurrenceDateOf(b)) - new Date(occurrenceDateOf(a)); });
   }
   function normalizeRecurringTasks(persist){
     var groups = {};
@@ -1627,12 +1596,6 @@
     if(inRange(occurrenceDateOf(task), range)) return true;
     return task.history.some(function(h){ return h.from !== null && inRange(h.at, range); });
   }
-  function taskDeletedInRange(task, range){
-    if(task.status !== "trash") return false;
-    if(!range[0]) return true;
-    if(isRecurringTask(task)) return dateInRangeValue(new Date(occurrenceDateOf(task)), range);
-    return task.history.some(function(h){ return h.to === "trash" && inRange(h.at, range); });
-  }
 
   // ---------- rendering ----------
   var app = document.getElementById("app");
@@ -1942,65 +1905,6 @@
     listModalRoot.innerHTML = "";
     listModalRoot.appendChild(overlay);
   }
-  function renderCarryoverModal(tasks){
-    var overlay = el("div", {class:"modal-overlay", style:"z-index:250;", onclick:function(e){ if(e.target === overlay) closeListModal(); }});
-    var box = el("div", {class:"modal summary-list-modal carryover-modal", role:"dialog", "aria-modal":"true", "aria-label":"Công việc chưa hoàn thành các kỳ trước"});
-    box.appendChild(dialogHeader("Công việc chưa hoàn thành các kỳ trước", tasks.length + " công việc cần theo dõi", "CÔNG VIỆC TỒN", closeListModal));
-    var body = el("div", {class:"modal-body"});
-    var search = el("input", {class:"summary-search", type:"search", placeholder:"Tìm theo tên công việc...", "aria-label":"Tìm công việc chưa hoàn thành"});
-    var tableWrap = el("div", {class:"clickable-table"});
-    body.appendChild(search);
-    body.appendChild(tableWrap);
-    box.appendChild(body);
-    function renderRows(list){
-      tableWrap.innerHTML = "";
-      if(!list.length){
-        tableWrap.appendChild(el("div", {class:"empty-hint"}, [tasks.length ? "Không tìm thấy công việc phù hợp." : "Không có công việc chưa hoàn thành từ các kỳ trước."]));
-        return;
-      }
-      var table = el("table");
-      table.appendChild(el("thead", {}, [el("tr", {}, [
-        el("th", {style:"width:42px;"}, ["STT"]),
-        el("th", {}, ["Tên công việc"]),
-        el("th", {}, ["Trạng thái"]),
-        el("th", {}, ["Ngày thực hiện"]),
-        el("th", {}, ["Lịch lặp"]),
-        el("th", {style:"width:92px;"}, ["Điều hướng"])
-      ])]));
-      var tbody = el("tbody");
-      list.forEach(function(task, index){
-        var row = el("tr");
-        row.appendChild(el("td", {}, [String(index + 1)]));
-        row.appendChild(el("td", {style:"font-weight:650;color:var(--text);"}, [task.title]));
-        row.appendChild(el("td", {}, [statusBadge(task.status)]));
-        row.appendChild(el("td", {style:"white-space:nowrap;"}, [fmtDate(occurrenceDateOf(task))]));
-        row.appendChild(el("td", {}, [recurrenceLabel(task) || "—"]));
-        row.appendChild(el("td", {}, [el("button", {type:"button", class:"go-to-period", "aria-label":"Đi tới kỳ của " + task.title, onclick:function(){
-          state.workAnchorDate = dateKey(occurrenceDateOf(task));
-          if(state.workPeriod === "custom"){
-            state.workPeriod = "today";
-            state.workFrom = null;
-            state.workTo = null;
-          }
-          closeListModal();
-          state.view = "work";
-          render();
-        }}, ["Đi tới"])]));
-        tbody.appendChild(row);
-      });
-      table.appendChild(tbody);
-      tableWrap.appendChild(table);
-    }
-    renderRows(tasks);
-    search.addEventListener("input", function(){
-      var query = search.value.trim().toLowerCase();
-      renderRows(query ? tasks.filter(function(task){ return task.title.toLowerCase().indexOf(query) >= 0; }) : tasks);
-    });
-    overlay.appendChild(box);
-    listModalRoot.innerHTML = "";
-    listModalRoot.appendChild(overlay);
-  }
-
   function periodButtons(options, current, onSelect, viewKey){
     var wrap = document.createDocumentFragment();
     if(viewKey){
@@ -2058,20 +1962,6 @@
       el("div", {}, [el("h2", {}, ["Công việc"]),
         el("p", {}, ["Theo dõi từng bước. Kéo thả hoặc mở thẻ để cập nhật trạng thái."])])
     ]));
-    var carryoverButton = el("button", {type:"button", class:"carryover-trigger", onclick:function(){ renderCarryoverModal(previousUnfinishedTasks(activeWorkRange)); }});
-    function refreshCarryover(){
-      var count = previousUnfinishedTasks(activeWorkRange).length;
-      carryoverButton.classList.toggle("has-tasks", count > 0);
-      carryoverButton.innerHTML = "";
-      carryoverButton.appendChild(el("span", {class:"carryover-icon", "aria-hidden":"true"}, [count ? "!" : "✓"]));
-      carryoverButton.appendChild(el("span", {class:"carryover-copy"}, [count
-        ? "Có " + count + " công việc chưa hoàn thành từ các kỳ trước"
-        : "Không có công việc chưa hoàn thành từ các kỳ trước"]));
-      carryoverButton.appendChild(el("span", {class:"carryover-arrow", "aria-hidden":"true"}, ["→"]));
-    }
-    refreshCarryover();
-    container.appendChild(carryoverButton);
-
     var toolbar = el("div", {class:"toolbar"});
     toolbar.appendChild(periodButtons([
       {key:"today", label:"Ngày"},
@@ -2092,14 +1982,21 @@
         if(badge) badge.textContent = String(count);
       });
     }
+    function sortCardsByStatusEnteredAt(listEl){
+      var cards = Array.prototype.slice.call(listEl.querySelectorAll(":scope > .task-card"));
+      cards.map(function(card){
+        var task = getTaskById(card.getAttribute("data-task-id"));
+        return {card:card, at: task ? statusEnteredAt(task) : null};
+      }).sort(function(a, b){ return new Date(b.at) - new Date(a.at); })
+        .forEach(function(item){ listEl.appendChild(item.card); });
+    }
     function applyColumnSearch(column, query){
       var normalized = (query || "").trim().toLowerCase();
+      var filterByPeriod = column.dataset.statusKey === "done";
       column.querySelectorAll(".task-card").forEach(function(card){
         var title = card.getAttribute("data-task-title") || "";
         var task = getTaskById(card.getAttribute("data-task-id"));
-        var outsideRange = task && (column.classList.contains("trash-column")
-          ? !taskDeletedInRange(task, activeWorkRange)
-          : !taskRelevantToRange(task, activeWorkRange));
+        var outsideRange = filterByPeriod && task && !taskRelevantToRange(task, activeWorkRange);
         card.classList.toggle("search-hidden", outsideRange || (!!normalized && title.indexOf(normalized) === -1));
       });
       refreshColumnCounts();
@@ -2256,12 +2153,14 @@
         desiredTasks.forEach(function(t){
           if(!existingIds[t.id]) list.appendChild(buildWorkTaskCard(t, columnInfo.colDef));
         });
+        sortCardsByStatusEnteredAt(list);
         applyColumnSearch(columnInfo.column, state.workSearchByStatus[statusKey]);
       });
     }
     STATUSES.forEach(function(colDef, colIdx){
-      var colTasks = visible.filter(function(t){ return t.status === colDef.key; });
-      var column = el("div", {class:"column fade-in", style:
+      var colTasks = visible.filter(function(t){ return t.status === colDef.key; })
+        .sort(function(a, b){ return new Date(statusEnteredAt(b)) - new Date(statusEnteredAt(a)); });
+      var column = el("div", {class:"column fade-in", "data-status-key":colDef.key, style:
         "border-top-color:"+colDef.color+";background:"+colDef.color+"0d;animation-delay:"+(colIdx*0.06)+"s;"
       });
       var head = el("div", {class:"column-head", style:"background:"+colDef.color+"1c"});
@@ -2331,6 +2230,7 @@
           card.setAttribute("data-virtual", "false");
           list.appendChild(card);
           renderWorkCardContents(card, storedTask, colDef, false);
+          sortCardsByStatusEnteredAt(list);
           applyColumnSearch(column, state.workSearchByStatus[colDef.key]);
           var trashCardList = board.querySelector(".trash-column > .card-list");
           if(trashCardList && !trashCardList.querySelector(".task-card") && !trashCardList.querySelector(".trash-empty-hint")){
@@ -2353,7 +2253,8 @@
     refreshColumnCounts();
 
     // trash column — drag a card here to delete it
-    var trashTasks = state.tasks.filter(function(t){ return t.status === "trash"; });
+    var trashTasks = state.tasks.filter(function(t){ return t.status === "trash"; })
+      .sort(function(a, b){ return new Date(statusEnteredAt(b)) - new Date(statusEnteredAt(a)); });
     var trashColumn = el("div", {class:"trash-column fade-in", style:"animation-delay:"+(STATUSES.length*0.06)+"s;"});
     var trashHead = el("div", {class:"column-head"});
     trashHead.appendChild(el("h3", {style:"color:"+TRASH_STATUS.color}, [TRASH_STATUS.label]));
@@ -2379,6 +2280,7 @@
         if(emptyHint) emptyHint.remove();
         trashList.appendChild(card);
         renderWorkCardContents(card, storedTask, TRASH_STATUS, true);
+        sortCardsByStatusEnteredAt(trashList);
         applyColumnSearch(trashColumn, state.workSearchByStatus.trash);
         var clearTrashButton = trashColumn.querySelector(".trash-clear button");
         if(clearTrashButton) clearTrashButton.removeAttribute("disabled");
@@ -2452,7 +2354,6 @@
     state.workViewApi = {
       setPeriod:function(period){
         activeWorkRange = getRange(period, state.workFrom, state.workTo, state.workAnchorDate);
-        refreshCarryover();
         var periodKeys = ["today", "week", "month", "year"];
         toolbar.querySelectorAll(".period-quick-button").forEach(function(button, index){
           button.className = "period-quick-button" + (periodKeys[index] === period ? " active" : "");
@@ -2466,7 +2367,6 @@
       },
       refreshDate:function(){
         activeWorkRange = getRange(state.workPeriod, state.workFrom, state.workTo, state.workAnchorDate);
-        refreshCarryover();
         var periodKeys = ["today", "week", "month", "year"];
         toolbar.querySelectorAll(".period-quick-button").forEach(function(button, index){
           button.className = "period-quick-button" + (periodKeys[index] === state.workPeriod ? " active" : "");
@@ -2480,7 +2380,6 @@
       },
       refreshRange:function(){
         activeWorkRange = getRange(state.workPeriod, state.workFrom, state.workTo, state.workAnchorDate);
-        refreshCarryover();
         syncWorkBoardTasks();
         board.querySelectorAll(".column,.trash-column").forEach(function(column){
           var key = column.querySelector(".column-search");
