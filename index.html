@@ -1596,6 +1596,15 @@
     if(inRange(occurrenceDateOf(task), range)) return true;
     return task.history.some(function(h){ return h.from !== null && inRange(h.at, range); });
   }
+  function taskCompletedInRange(task, range){
+    if(task.status !== "done") return false;
+    if(!range[0]) return true;
+    var history = Array.isArray(task.history) ? task.history : [];
+    for(var index = history.length - 1; index >= 0; index--){
+      if(history[index].to === "done") return inRange(history[index].at, range);
+    }
+    return false;
+  }
 
   // ---------- rendering ----------
   var app = document.getElementById("app");
@@ -1996,7 +2005,7 @@
       column.querySelectorAll(".task-card").forEach(function(card){
         var title = card.getAttribute("data-task-title") || "";
         var task = getTaskById(card.getAttribute("data-task-id"));
-        var outsideRange = filterByPeriod && task && !taskRelevantToRange(task, activeWorkRange);
+        var outsideRange = filterByPeriod && task && !taskCompletedInRange(task, activeWorkRange);
         card.classList.toggle("search-hidden", outsideRange || (!!normalized && title.indexOf(normalized) === -1));
       });
       refreshColumnCounts();

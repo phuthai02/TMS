@@ -156,10 +156,13 @@ async function main() {
         {id:'qa-carry-pending',title:'Đợi duyệt kỳ cũ',status:'pending',createdAt:day(-3),occurrenceDate:day(-3)},
         {id:'qa-carry-todo',title:'Việc chưa bắt đầu',status:'todo',createdAt:day(-2),occurrenceDate:day(-2)},
         {id:'qa-carry-done',title:'Việc đã xong',status:'done',createdAt:day(-4),occurrenceDate:day(-4)},
-        {id:'qa-carry-future',title:'Việc tương lai',status:'todo',createdAt:day(1),occurrenceDate:day(1)}
-      ].map(task=>({...task,description:'',history:[{at:task.createdAt,from:null,to:task.status}],reminderAt:null}));
+        {id:'qa-carry-future',title:'Việc tương lai',status:'todo',createdAt:day(1),occurrenceDate:day(1)},
+        {id:'qa-done-today',title:'Việc hôm qua hoàn thành hôm nay',status:'done',createdAt:day(-1),occurrenceDate:day(-1),history:[{at:day(-1),from:null,to:'todo'},{at:day(0),from:'todo',to:'done'}]},
+        {id:'qa-done-yesterday',title:'Việc hôm nay hoàn thành hôm qua',status:'done',createdAt:day(-2),occurrenceDate:day(0),history:[{at:day(-2),from:null,to:'todo'},{at:day(-1),from:'todo',to:'done'}]},
+        {id:'qa-repeat-done-today',title:'Kỳ lặp hôm qua hoàn thành hôm nay',status:'done',createdAt:day(-2),occurrenceDate:day(-1),history:[{at:day(-1),from:null,to:'todo'},{at:day(0),from:'todo',to:'done'}],recurrenceId:'qa-done-series',recurrenceRule:'daily',recurrenceStart:day(-1),recurrenceInitialStatus:'todo'}
+      ].map(task=>({...task,description:'',history:task.history||[{at:task.createdAt,from:null,to:task.status}],reminderAt:null}));
       localStorage.setItem('tqm_tasks_v1',JSON.stringify(tasks));
-      localStorage.setItem('tqm_series_v1','{}');
+      localStorage.setItem('tqm_series_v1',JSON.stringify({'qa-done-series':{title:'Kỳ lặp hôm qua hoàn thành hôm nay',description:'',rule:'daily',start:day(-1),createdAt:day(-2),anchorDate:day(-1).slice(0,10),initialStatus:'todo',excludedDates:[]}}));
     })()`);
     await send('Page.navigate', { url: targetUrl });
     await new Promise(resolve => setTimeout(resolve, 350));
@@ -169,6 +172,9 @@ async function main() {
     assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-todo"]:not(.search-hidden)')`), true, 'past todo task stays visible under the "today" period');
     assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-future"]:not(.search-hidden)')`), true, 'future todo task stays visible under the "today" period');
     assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-carry-done"].search-hidden')`), true, 'done task from another period is still hidden by the period filter');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-done-today"]:not(.search-hidden)')`), true, 'task due yesterday and completed today appears in today Done');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-done-yesterday"].search-hidden')`), true, 'task due today but completed yesterday is hidden from today Done');
+    assert.equal(await evaluate(`!!document.querySelector('[data-task-id="qa-repeat-done-today"]:not(.search-hidden)')`), true, 'recurring occurrence completed today appears in today Done');
     console.log('non-done columns ignore the period filter, done column still respects it: OK');
     await send('Emulation.setDeviceMetricsOverride', {
       width: 390, height: 900, deviceScaleFactor: 1, mobile: true,
@@ -618,7 +624,7 @@ async function main() {
       return {created:new Date(task.createdAt).toDateString(),execution:new Date(task.occurrenceDate).toDateString(),onToday:!!card && !card.classList.contains('search-hidden')};
     })()`);
     assert.notEqual(movedDate.created, movedDate.execution);
-    assert.equal(movedDate.onToday, false, 'scheduled task leaves the original day');
+    assert.equal(movedDate.onToday, true, 'non-done task stays visible when its execution date changes');
     const returnedToWork = await evaluate(`(() => {
       const transfer=new DataTransfer(); transfer.setData('text/plain','qa-done-return');
       document.querySelectorAll('.column .card-list')[1].dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));
