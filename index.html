@@ -205,10 +205,6 @@
   .day-chip[aria-pressed="true"]{border-color:var(--primary);background:var(--primary);color:var(--on-primary);}
   .day-chip[aria-pressed="true"] .day-chip-wd{color:var(--on-primary);}
   .day-chip[aria-pressed="true"] .day-chip-dots span{box-shadow:0 0 0 1.5px var(--on-primary);}
-  .review-banner{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px;padding:12px 16px;border:1px solid var(--primary-soft-border);border-radius:var(--radius);background:var(--primary-soft);color:var(--text);}
-  .review-banner>.icon{width:20px;height:20px;color:var(--primary-ink);}
-  .review-banner-text{flex:1 1 280px;}
-  .review-banner .btn{min-height:36px;border-color:var(--primary-soft-border);background:var(--surface);color:var(--primary-ink);}
 
   /* ---------- work board ---------- */
   .board{display:grid;grid-template-columns:repeat(var(--board-cols,6),minmax(0,1fr));gap:var(--gap-board);align-items:stretch;padding:1px 1px 8px;}
@@ -331,6 +327,7 @@
   .setting-hint{color:var(--text-muted);font-size:var(--fs-xs);}
   .segmented{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--sunken);}
   .segmented button{min-width:0;min-height:36px;padding:6px 10px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--text-dim);font-size:var(--fs-sm);font-weight:500;line-height:1.25;text-align:center;transition:background .15s var(--ease),color .15s var(--ease);}
+  .segmented button .icon{width:16px;height:16px;margin-right:6px;vertical-align:-3px;}
   .segmented button:focus-visible{outline-offset:-2px;}
   .segmented button:hover{color:var(--text);}
   .segmented button[aria-pressed="true"]{background:var(--surface);color:var(--text);font-weight:700;box-shadow:0 1px 3px rgba(24,24,27,.12);}
@@ -712,6 +709,7 @@
     .order-palette{grid-template-columns:repeat(8,minmax(0,1fr));padding-left:0;}
     .gantt-grid{--gantt-label:128px;min-width:calc(var(--gantt-label) + 14 * 44px);}
     .gantt-head h3{flex:1 1 100%;}
+    .segmented button .icon{display:block;margin:0 auto 2px;}
     .text-long{display:none;}
     .text-short{display:inline;}
     .order-swatch{width:32px;height:32px;flex-basis:32px;}
@@ -759,6 +757,7 @@
   }
   @media (max-width:360px){
     .period-segment button{padding:6px 2px;font-size:var(--fs-xs);}
+    .segmented button{padding-left:4px;padding-right:4px;}
     .period-today{flex:1 1 100%;}
     .modal-detail .history-item.is-editing{grid-template-columns:1fr;grid-template-areas:"time" "actions" "status";}
     .modal-detail .history-item.is-editing .history-actions{justify-self:start;}
@@ -1012,6 +1011,7 @@
     orange:{name:"Cam", fill:"#c2410c", inkLight:"#c2410c", inkDark:"#fdba74", softLight:"#fff7ed", softDark:"rgba(249,115,22,.18)"}
   };
   var VIEW_LABELS = {report:"Tổng quan", work:"Công việc", calendar:"Lịch", settings:"Tùy chỉnh"};
+  var VIEW_ICONS = {report:"overview", work:"board", calendar:"calendar", settings:"sliders"};
   var REPORT_SECTION_LABELS = {insight:"Tiến độ kỳ này", summary:"Thẻ thống kê", charts:"Biểu đồ và việc đã hoàn thành", lists:"Việc cần làm và nhắc lịch"};
   var CARD_FIELDS = [
     {key:"span", label:"Nhãn số ngày", hint:"Ví dụ “Ngày 2/3” cho việc làm trong nhiều ngày"},
@@ -1791,7 +1791,6 @@
     download: "M12 3v12M7 10l5 5 5-5M5 21h14",
     upload: "M12 21V9M7 14l5-5 5 5M5 3h14",
     calendar: "M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM8 2v4M16 2v4M3 10h18",
-    history: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2",
     chevronUp: "m18 15-6-6-6 6",
     chevronDown: "m6 9 6 6 6-6",
     eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
@@ -2473,19 +2472,6 @@
     }
     return strip;
   }
-  function buildReviewBanner(range){
-    var isDay = state.workPeriod === "today";
-    var unit = isDay ? "ngày" : "kỳ";
-    var label = isDay ? longDayLabel(range[0]) : "kỳ " + fmtDate(range[0]) + " – " + fmtDate(range[1]);
-    return el("div", {class:"review-banner", role:"status"}, [
-      icon("history"),
-      el("span", {class:"review-banner-text"}, [
-        el("strong", {}, ["Đang xem lại " + label + ". "]),
-        "Mỗi cột là trạng thái công việc vào cuối " + unit + " đó; cột Hoàn thành chỉ gồm việc xong trong " + unit + " này. Kéo thả tạm khóa khi xem lại."
-      ]),
-      el("button", {type:"button", class:"btn", onclick:function(){ changeWorkPeriod("today"); }}, ["Về hôm nay"])
-    ]);
-  }
   function buildSnapshotCard(task, status, since, range){
     var cardFields = state.settings.card;
     var card = el("div", {
@@ -2579,7 +2565,6 @@
     var dayStrip = buildDayStrip(range);
     container.appendChild(dayStrip);
     if(isReviewRange(range)){
-      container.appendChild(buildReviewBanner(range));
       container.appendChild(buildSnapshotBoard(range));
       state.workViewApi = {setPeriod:render, refreshDate:render, refreshRange:render};
       app.appendChild(container);
@@ -3494,7 +3479,7 @@
       group.appendChild(el("button", {
         type:"button", "aria-pressed":String(option.value === current), "data-setting-id":id + ":" + option.value,
         onclick:function(){ onPick(option.value); }
-      }, [option.label]));
+      }, option.icon ? [icon(option.icon), option.label] : [option.label]));
     });
     var row = el("div", {class:"setting-row"}, [el("span", {class:"setting-label", id:id + "-label"}, [label]), group]);
     if(hint) row.appendChild(el("span", {class:"setting-hint"}, [hint]));
@@ -3602,11 +3587,10 @@
 
     var menuList = el("div", {class:"order-list"});
     settings.menu.forEach(function(item, index){
-      var iconName = {report:"overview", work:"board", calendar:"calendar", settings:"sliders"}[item.key];
-      menuList.appendChild(orderRow("menu", index, VIEW_LABELS[item.key], icon(iconName), {canHide:item.key !== "settings"}));
+      menuList.appendChild(orderRow("menu", index, VIEW_LABELS[item.key], icon(VIEW_ICONS[item.key]), {canHide:item.key !== "settings"}));
     });
     var startOptions = settings.menu.filter(function(item){ return item.on && item.key !== "settings"; })
-      .map(function(item){ return {value:item.key, label:VIEW_LABELS[item.key]}; });
+      .map(function(item){ return {value:item.key, label:VIEW_LABELS[item.key], icon:VIEW_ICONS[item.key]}; });
     var menuChildren = [menuList];
     if(startOptions.length) menuChildren.push(settingSegmented("start-view", "Mở ứng dụng vào", startOptions, settings.startView, function(value){ updateSettings({startView:value}); }));
     grid.appendChild(settingsCard("Menu", "Sắp xếp, ẩn mục và chọn màn hình mở đầu.", menuChildren));
