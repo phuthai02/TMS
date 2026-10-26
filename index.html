@@ -605,6 +605,7 @@
     .period-range{order:0;width:calc(100% - 82px);padding:4px 6px;gap:4px;}
     .period-range input{flex:1;width:auto;min-width:0;font-size:10px;padding:3px 4px;}
     .period-range span{font-size:10px;}
+    .toolbar>.btn-outline{flex:1 1 calc(50% - 4px);}
     .toolbar>.btn-primary{width:100%;}
     .board{grid-template-columns:1fr;gap:11px;}
     .column,.trash-column{height:auto;min-height:250px;}
@@ -697,6 +698,8 @@
   var STORAGE_KEY = "tqm_tasks_v1";
   var SERIES_STORAGE_KEY = "tqm_series_v1";
   var MIGRATION_BACKUP_PREFIX = "tqm_migration_backup_v2_";
+  var STORAGE_PREFIX = "tqm_";
+  var EXPORT_FORMAT = "tms-data-export";
   var STATUSES = [
     {key:"todo", label:"Mới", color:"#2f8fe0"},
     {key:"inprogress", label:"Đang thực hiện", color:"#e0378f"},
@@ -761,6 +764,108 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
       return true;
     }catch(e){ return false; }
+  }
+
+  // ---------- xuất / nhập dữ liệu (debug) ----------
+  function readAppStorage(){
+    var storage = {};
+    for(var index = 0; index < localStorage.length; index++){
+      var key = localStorage.key(index);
+      if(key && key.indexOf(STORAGE_PREFIX) === 0) storage[key] = localStorage.getItem(key);
+    }
+    return storage;
+  }
+  function exportUserData(){
+    var storage;
+    try{ storage = readAppStorage(); }
+    catch(e){
+      showConfirm("Không đọc được dữ liệu trong trình duyệt.", {title:"Không thể xuất dữ liệu", hideCancel:true, okLabel:"Đã hiểu"});
+      return;
+    }
+    var now = new Date();
+    var payload = {
+      format: EXPORT_FORMAT,
+      version: 1,
+      exportedAt: now.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timezoneOffset: now.getTimezoneOffset(),
+      userAgent: navigator.userAgent,
+      storage: storage
+    };
+    var fileName = "tms-data-" + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + ".json";
+    var url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"}));
+    var link = el("a", {href:url, download:fileName});
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 0);
+  }
+  function parseImportStorage(text){
+    try{
+      var payload = JSON.parse(text);
+      if(!payload || payload.format !== EXPORT_FORMAT || !payload.storage || typeof payload.storage !== "object") return null;
+      var storage = {};
+      Object.keys(payload.storage).forEach(function(key){
+        if(key.indexOf(STORAGE_PREFIX) === 0 && typeof payload.storage[key] === "string") storage[key] = payload.storage[key];
+      });
+      if(storage[STORAGE_KEY] !== undefined && !Array.isArray(JSON.parse(storage[STORAGE_KEY]))) return null;
+      if(storage[SERIES_STORAGE_KEY] !== undefined){
+        var series = JSON.parse(storage[SERIES_STORAGE_KEY]);
+        if(!series || typeof series !== "object" || Array.isArray(series)) return null;
+      }
+      return storage;
+    }catch(e){ return null; }
+  }
+  function writeImportedStorage(storage){
+    var mainKeys = [STORAGE_KEY, SERIES_STORAGE_KEY];
+    var previous = {};
+    mainKeys.forEach(function(key){ previous[key] = localStorage.getItem(key); });
+    try{
+      mainKeys.forEach(function(key){ if(storage[key] === undefined) localStorage.removeItem(key); });
+      Object.keys(storage).forEach(function(key){ localStorage.setItem(key, storage[key]); });
+      return true;
+    }catch(e){
+      try{
+        mainKeys.forEach(function(key){
+          if(previous[key] === null) localStorage.removeItem(key);
+          else localStorage.setItem(key, previous[key]);
+        });
+      }catch(restoreError){}
+      return false;
+    }
+  }
+  function importUserData(file){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var storage = parseImportStorage(reader.result);
+      if(!storage){
+        showConfirm("File \"" + file.name + "\" không phải dữ liệu xuất từ TMS hoặc đã bị hỏng.", {title:"Không thể nhập dữ liệu", hideCancel:true, okLabel:"Đã hiểu"});
+        return;
+      }
+      var taskCount = storage[STORAGE_KEY] ? JSON.parse(storage[STORAGE_KEY]).length : 0;
+      showConfirm("Dữ liệu hiện tại trong trình duyệt sẽ bị thay bằng " + taskCount + " công việc từ file \"" + file.name + "\". Hãy xuất dữ liệu hiện tại trước nếu cần giữ lại.", {
+        title:"Nhập dữ liệu",
+        tone:"danger",
+        okLabel:"Nhập và tải lại",
+        onOk:function(){
+          if(!writeImportedStorage(storage)){
+            showConfirm("Không ghi được dữ liệu vào trình duyệt (có thể do hết dung lượng). Dữ liệu cũ đã được giữ nguyên.", {title:"Không thể nhập dữ liệu", hideCancel:true, okLabel:"Đã hiểu"});
+            return;
+          }
+          location.reload();
+        }
+      });
+    };
+    reader.onerror = function(){
+      showConfirm("Không đọc được file \"" + file.name + "\".", {title:"Không thể nhập dữ liệu", hideCancel:true, okLabel:"Đã hiểu"});
+    };
+    reader.readAsText(file);
+  }
+  function pickImportFile(){
+    var input = el("input", {type:"file", accept:".json,application/json", onchange:function(){
+      if(input.files && input.files[0]) importUserData(input.files[0]);
+    }});
+    input.click();
   }
 
   function uid(){
@@ -1980,6 +2085,8 @@
     ], state.workPeriod, changeWorkPeriod, "work"));
 
     toolbar.appendChild(el("div", {class:"spacer"}));
+    toolbar.appendChild(el("button", {class:"btn btn-outline", title:"Tải toàn bộ dữ liệu trong trình duyệt về file JSON", onclick: function(){ exportUserData(); }}, ["Xuất dữ liệu"]));
+    toolbar.appendChild(el("button", {class:"btn btn-outline", title:"Thay dữ liệu hiện tại bằng file JSON đã xuất", onclick: function(){ pickImportFile(); }}, ["Nhập dữ liệu"]));
     toolbar.appendChild(el("button", {class:"btn btn-primary", onclick: function(){ openBulkModal(); }}, ["+ Thêm nhiều việc"]));
     container.appendChild(toolbar);
 
