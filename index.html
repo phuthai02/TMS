@@ -296,12 +296,13 @@
   .gantt-label:hover{background:var(--surface-2);}
   .gantt-label,.gantt-corner{position:sticky;left:0;z-index:2;background:var(--surface);}
   .gantt-corner{border-right:1px dashed var(--border);}
-  .gantt-label-title{width:100%;overflow-x:auto;overflow-y:hidden;font-weight:600;white-space:nowrap;scrollbar-width:none;}
-  .gantt-label-title::-webkit-scrollbar{display:none;}
-  .gantt-label-text{display:inline-block;min-width:var(--name-w,0px);}
-  .gantt-label-title.can-scroll-right{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent);}
-  .gantt-label-title.can-scroll-left{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 20px),transparent);}
-  .gantt-label-title.can-scroll-left.can-scroll-right{-webkit-mask-image:linear-gradient(to right,transparent,#000 20px,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to right,transparent,#000 20px,#000 calc(100% - 20px),transparent);}
+  .gantt-label-scroll{display:block;width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;}
+  .gantt-label-scroll::-webkit-scrollbar{display:none;}
+  .gantt-label-inner{display:inline-flex;flex-direction:column;gap:2px;min-width:var(--name-w,0px);white-space:nowrap;}
+  .gantt-label-title{font-weight:600;}
+  .gantt-label-scroll.can-scroll-right{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 20px),transparent);}
+  .gantt-label-scroll.can-scroll-left{-webkit-mask-image:linear-gradient(to left,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to left,#000 calc(100% - 20px),transparent);}
+  .gantt-label-scroll.can-scroll-left.can-scroll-right{-webkit-mask-image:linear-gradient(to right,transparent,#000 20px,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to right,transparent,#000 20px,#000 calc(100% - 20px),transparent);}
   .gantt-label-status{color:var(--row-ink);font-size:var(--fs-xs);font-weight:600;}
   .gantt-cell{grid-row:1;align-self:stretch;}
   .gantt-cell+.gantt-cell{border-left:1px dashed var(--border);}
@@ -3424,8 +3425,10 @@
       var rangeText = fmtDate(entry.first).slice(0, 5) + " → " + (span.end !== null ? fmtDate(span.end).slice(0, 5) : "nay");
       var row = el("div", {class:"gantt-row", style:"--row-fill:" + colDef.color + ";--row-ink:" + colDef.ink + ";"});
       row.appendChild(el("button", {type:"button", class:"gantt-label", title:task.title + " · " + rangeText + " · " + total + " ngày", onclick:function(){ openTaskDetail(task.id); }}, [
-        el("span", {class:"gantt-label-title drag-scroll"}, [el("span", {class:"gantt-label-text"}, [task.title])]),
-        el("span", {class:"gantt-label-status"}, [colDef.label])
+        el("span", {class:"gantt-label-scroll drag-scroll"}, [el("span", {class:"gantt-label-inner"}, [
+          el("span", {class:"gantt-label-title"}, [task.title]),
+          el("span", {class:"gantt-label-status"}, [colDef.label])
+        ])])
       ]));
       columns.forEach(function(column, index){
         row.appendChild(el("span", {class:"gantt-cell" + (column.isSelected ? " is-selected" : (column.isNow ? " is-today" : "")), "aria-hidden":"true", style:"grid-column:" + (index + 2) + ";"}));
@@ -3513,14 +3516,14 @@
     layout.appendChild(agenda);
     container.appendChild(layout);
     app.appendChild(container);
-    // tên việc dài: cả cột tên cuộn ngang cùng nhau; mọi ô cùng bề rộng nên vị trí cuộn luôn khớp
-    var nameBoxes = grid.querySelectorAll(".gantt-label-title");
+    // tên việc dài: cả cột Công việc (tên + trạng thái) cuộn ngang cùng nhau; mọi ô cùng bề rộng nên vị trí cuộn luôn khớp
+    var nameBoxes = grid.querySelectorAll(".gantt-label-scroll");
     var nameWidth = 0;
     nameBoxes.forEach(function(box){ nameWidth = Math.max(nameWidth, Math.ceil(box.firstChild.getBoundingClientRect().width)); });
     grid.style.setProperty("--name-w", nameWidth + "px");
     grid.addEventListener("scroll", function(event){
       var source = event.target;
-      if(!source.classList || !source.classList.contains("gantt-label-title")) return;
+      if(!source.classList || !source.classList.contains("gantt-label-scroll")) return;
       nameBoxes.forEach(function(box){ if(box !== source && box.scrollLeft !== source.scrollLeft) box.scrollLeft = source.scrollLeft; });
     }, true);
     // khung hẹp: đưa ngày đang chọn (xem Ngày: giờ hiện tại, hoặc giờ bắt đầu sớm nhất, mặc định 8h) vào giữa dòng thời gian
