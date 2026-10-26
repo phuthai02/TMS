@@ -195,7 +195,7 @@
   .day-chip{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:64px;padding:8px 4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);transition:background .15s var(--ease),border-color .15s var(--ease);}
   .day-chip:hover{border-color:var(--border-strong);}
   .day-chip-wd{color:var(--text-muted);font-size:var(--fs-xs);font-weight:600;}
-  .day-chip-num{font-size:18px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;}
+  .day-chip-num{font-size:18px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;}
   .day-chip-dots{display:flex;gap:4px;height:6px;}
   .day-chip-dots span{width:6px;height:6px;border-radius:50%;}
   .day-chip.is-in-range{border-color:var(--primary-soft-border);background:var(--primary-soft);}
@@ -285,7 +285,8 @@
   .gantt-day{display:flex;flex-direction:column;align-items:center;min-height:52px;margin:0 2px 6px;padding:6px 0;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text);}
   .gantt-day:hover{background:var(--surface-2);}
   .gantt-day-wd{color:var(--text-muted);font-size:var(--fs-xs);}
-  .gantt-day-num{font-weight:700;font-variant-numeric:tabular-nums;}
+  .gantt-day-num{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .day-month{font-size:.65em;font-weight:600;}
   .gantt-day.is-today{background:var(--primary-soft);}
   .gantt-day.is-today .gantt-day-wd{color:var(--primary-ink);}
   .gantt-day[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary);}
@@ -301,6 +302,8 @@
   .gantt-bar{grid-row:1;z-index:1;display:flex;align-items:center;height:28px;margin:0 3px;padding:0 10px;overflow:hidden;border:1px solid var(--row-fill);border-radius:var(--radius-sm);background:color-mix(in srgb,var(--row-fill) 18%,var(--surface));color:var(--row-ink);font-size:var(--fs-xs);font-weight:700;white-space:nowrap;text-overflow:ellipsis;}
   .gantt-bar.cut-start{border-top-left-radius:0;border-bottom-left-radius:0;border-left-style:dashed;}
   .gantt-bar.cut-end{border-top-right-radius:0;border-bottom-right-radius:0;border-right-style:dashed;}
+  .gantt-bar.join-start{margin-left:0;border-left-width:0;border-top-left-radius:0;border-bottom-left-radius:0;}
+  .gantt-bar.join-end{margin-right:0;border-top-right-radius:0;border-bottom-right-radius:0;}
   .agenda-kicker{color:var(--primary-ink);font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
   .agenda-title{margin:4px 0 0;font-size:20px;font-weight:700;letter-spacing:-.02em;}
   .agenda-summary{margin:4px 0 0;color:var(--text-dim);}
@@ -551,10 +554,11 @@
   .reminder-item .btn{flex:0 0 auto;border-color:var(--primary-soft-border);background:var(--primary-soft);color:var(--primary-ink);font-size:var(--fs-sm);}
   .reminder-item .btn:hover{border-color:var(--primary);}
   .reminder-item .approval-timing{margin-top:6px;}
-  .summary-list-modal{height:min(650px,88dvh);max-width:760px;}
+  .summary-list-modal{height:min(760px,90dvh);max-width:1180px;}
   .summary-list-modal .modal-body{display:flex;flex-direction:column;gap:12px;padding:16px 24px 24px;overflow:hidden;}
   .summary-list-modal .clickable-table{flex:1;min-height:0;max-height:none!important;overflow:auto;}
-  .summary-list-modal table{min-width:780px;}
+  .summary-list-modal table{min-width:900px;}
+  .summary-list-modal th{white-space:nowrap;}
   .summary-list-modal th{position:sticky;top:0;z-index:1;}
   .summary-search{width:100%;min-height:40px;padding:8px 12px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:var(--fs-md);}
   .summary-search:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 20%,transparent);}
@@ -1623,6 +1627,10 @@
     var end = start !== null && last && FINAL_STATUSES[last.to] ? new Date(last.at).getTime() : null;
     return {start:start, end:end};
   }
+  // trạng thái lúc cuối ngày (hôm nay thì lấy lúc này)
+  function statusOnDay(task, dayMs){
+    return statusAtTime(task, Math.min(dayMs + DAY_MS - 1, Date.now())).status;
+  }
   function workedOnDay(task, dayMs){
     var history = sortedHistory(task);
     var dayEnd = dayMs + DAY_MS - 1;
@@ -2366,7 +2374,7 @@
       var table = el("table");
       table.appendChild(el("thead", {}, [el("tr", {}, [
         el("th", {style:"width:36px;"}, ["STT"]),
-        el("th", {}, ["Tên công việc"]),
+        el("th", {style:"min-width:280px;"}, ["Tên công việc"]),
         el("th", {}, ["Trạng thái"]),
         el("th", {}, ["Ngày thực hiện"]),
         el("th", {}, ["Chờ duyệt"]),
@@ -2459,7 +2467,7 @@
         onclick:(function(ms){ return function(){ selectWorkDay(ms); }; })(dayMs)
       }, [
         el("span", {class:"day-chip-wd"}, isToday ? [el("span", {class:"text-long"}, ["Hôm nay"]), el("span", {class:"text-short"}, ["Nay"])] : [shortWeekday(dayMs)]),
-        el("span", {class:"day-chip-num"}, [String(day.getDate())]),
+        el("span", {class:"day-chip-num"}, [String(day.getDate()), el("span", {class:"day-month"}, ["/" + pad(day.getMonth() + 1)])]),
         dots
       ]));
     }
@@ -3290,7 +3298,7 @@
     var container = el("div", {class:"calendar-view"});
     container.appendChild(el("div", {class:"view-heading"}, [
       el("div", {}, [el("h2", {}, ["Lịch"]),
-        el("p", {}, ["Mỗi thanh là quãng thời gian một việc được làm. Chọn một ngày để đọc nhật ký của ngày đó."])])
+        el("p", {}, ["Mỗi thanh chia đoạn theo trạng thái của việc trong từng ngày. Chọn một ngày để đọc nhật ký của ngày đó."])])
     ]));
     var calendarLabel = el("button", {
       type:"button", class:"period-label", "aria-haspopup":"dialog", "aria-label":"Đang xem " + longDayLabel(selected) + ". Bấm để chọn ngày khác",
@@ -3309,9 +3317,6 @@
     var layout = el("div", {class:"calendar-layout"});
     var ganttPanel = el("section", {class:"panel gantt-panel", "aria-label":"Dòng thời gian hai tuần"});
     var ganttHead = el("div", {class:"gantt-head"}, [el("h3", {}, ["Dòng thời gian"])]);
-    ["inprogress", "pending", "done"].forEach(function(key){
-      ganttHead.appendChild(el("span", {class:"gantt-legend", style:"--legend-color:" + STATUS_MAP[key].color + ";"}, [STATUS_MAP[key].label]));
-    });
     ganttPanel.appendChild(ganttHead);
     var grid = el("div", {class:"gantt-grid"});
     var header = el("div", {class:"gantt-row is-header"}, [el("span", {class:"gantt-corner"}, ["Công việc"])]);
@@ -3322,39 +3327,62 @@
         "aria-label":longDayLabel(dayMs) + (isToday ? ", hôm nay" : ""), onclick:function(){ selectCalendarDay(dayMs); }
       }, [
         el("span", {class:"gantt-day-wd"}, [isToday ? "Nay" : shortWeekday(dayMs)]),
-        el("span", {class:"gantt-day-num"}, [String(new Date(dayMs).getDate())])
+        el("span", {class:"gantt-day-num"}, [String(new Date(dayMs).getDate()), el("span", {class:"day-month"}, ["/" + pad(new Date(dayMs).getMonth() + 1)])])
       ]));
     });
     grid.appendChild(header);
-    var rows = state.tasks.map(function(task){ return {task:task, span:workSpan(task)}; }).filter(function(entry){
-      if(entry.span.start === null) return false;
+    // thanh bắt đầu từ ngày tạo như dải "Theo ngày" trong chi tiết; chỉ hiện việc đã từng bắt đầu làm
+    var rows = state.tasks.map(function(task){
+      var span = workSpan(task);
+      var history = sortedHistory(task);
+      if(span.start === null || !history.length) return null;
+      return {task:task, span:span, first:Math.min(new Date(history[0].at).getTime(), span.start)};
+    }).filter(function(entry){
+      if(!entry) return false;
       var endIndex = dayDiff(startMs, entry.span.end !== null ? entry.span.end : now);
-      return endIndex >= 0 && dayDiff(startMs, entry.span.start) <= 13;
-    }).sort(function(a, b){ return a.span.start - b.span.start; });
+      return endIndex >= 0 && dayDiff(startMs, entry.first) <= 13;
+    }).sort(function(a, b){ return a.first - b.first; });
+    var shownStatuses = {};
     rows.forEach(function(entry){
       var task = entry.task;
       var span = entry.span;
       var endMs = span.end !== null ? span.end : now;
-      var startIndex = dayDiff(startMs, span.start);
+      var startIndex = dayDiff(startMs, entry.first);
       var endIndex = dayDiff(startMs, endMs);
       var colDef = statusDef(task.status);
-      var total = dayDiff(span.start, endMs) + 1;
-      var rangeText = fmtDate(span.start).slice(0, 5) + " → " + (span.end !== null ? fmtDate(span.end).slice(0, 5) : "nay");
-      var text = total >= 3 ? rangeText : (total === 2 ? "2 ngày" : "");
+      var total = dayDiff(entry.first, endMs) + 1;
+      var rangeText = fmtDate(entry.first).slice(0, 5) + " → " + (span.end !== null ? fmtDate(span.end).slice(0, 5) : "nay");
       var row = el("div", {class:"gantt-row", style:"--row-fill:" + colDef.color + ";--row-ink:" + colDef.ink + ";"});
-      row.appendChild(el("button", {type:"button", class:"gantt-label", onclick:function(){ openTaskDetail(task.id); }}, [
-        el("span", {class:"gantt-label-title", title:task.title}, [task.title]),
+      row.appendChild(el("button", {type:"button", class:"gantt-label", title:task.title + " · " + rangeText + " · " + total + " ngày", onclick:function(){ openTaskDetail(task.id); }}, [
+        el("span", {class:"gantt-label-title"}, [task.title]),
         el("span", {class:"gantt-label-status"}, [colDef.label])
       ]));
       days.forEach(function(dayMs, index){
         row.appendChild(el("span", {class:"gantt-cell" + (dayMs === selected ? " is-selected" : (dayMs === today ? " is-today" : "")), "aria-hidden":"true", style:"grid-column:" + (index + 2) + ";"}));
       });
-      row.appendChild(el("span", {
-        class:"gantt-bar" + (startIndex < 0 ? " cut-start" : "") + (endIndex > 13 ? " cut-end" : ""),
-        style:"grid-column:" + (Math.max(0, startIndex) + 2) + " / " + (Math.min(13, endIndex) + 3) + ";",
-        title:task.title + ": " + rangeText + " · " + total + " ngày"
-      }, [text]));
+      // gộp các ngày liền nhau cùng trạng thái thành một đoạn
+      var runs = [];
+      for(var index = Math.max(0, startIndex); index <= Math.min(13, endIndex); index++){
+        var statusKey = statusOnDay(task, days[index]);
+        var last = runs[runs.length - 1];
+        if(last && last.status === statusKey) last.to = index;
+        else runs.push({status:statusKey, from:index, to:index});
+      }
+      runs.forEach(function(run, runIndex){
+        var def = statusDef(run.status);
+        var length = run.to - run.from + 1;
+        shownStatuses[def.key] = true;
+        row.appendChild(el("span", {
+          class:"gantt-bar" + (runIndex > 0 ? " join-start" : (startIndex < 0 ? " cut-start" : "")) +
+            (runIndex < runs.length - 1 ? " join-end" : (endIndex > 13 ? " cut-end" : "")),
+          style:"grid-column:" + (run.from + 2) + " / " + (run.to + 3) + ";--row-fill:" + def.color + ";--row-ink:" + def.ink + ";",
+          title:task.title + " · " + def.label + ": " + fmtDate(days[run.from]).slice(0, 5) + (length > 1 ? " → " + fmtDate(days[run.to]).slice(0, 5) : "") + " · " + length + " ngày"
+        }));
+      });
       grid.appendChild(row);
+    });
+    STATUSES.concat([TRASH_STATUS]).forEach(function(def){
+      if(shownStatuses[def.key]) ganttHead.appendChild(el("span", {class:"gantt-legend", style:"--legend-color:" + def.color + ";"}, [def.label]));
     });
     var scroll = el("div", {class:"gantt-scroll drag-scroll"}, [grid]);
     ganttPanel.appendChild(el("span", {class:"table-scroll-hint"}, ["Kéo ngang để xem đủ hai tuần →"]));
@@ -3367,7 +3395,7 @@
     var working = future ? [] : state.tasks.filter(function(task){ return workedOnDay(task, selected) && !doneOnDay(task, selected); }).map(function(task){
       var statusKey = statusAtTime(task, Math.min(dayEnd, now)).status;
       var chip = spanLabelForDay(task, selected);
-      return agendaItem(task, statusKey, statusDef(statusKey).label + (selected === today ? "" : " vào cuối ngày"), {text:chip || "Trong ngày", chip:true});
+      return agendaItem(task, statusKey, statusDef(statusKey).label, {text:chip || "Trong ngày", chip:true});
     });
     var finished = state.tasks.filter(function(task){ return doneOnDay(task, selected); }).map(function(task){
       var entry = sortedHistory(task).filter(function(h){ return h.to === "done" && dayStartMs(h.at) === selected; }).pop();
@@ -3433,8 +3461,7 @@
     for(var index = 0; index < total; index++){
       var day = new Date(first);
       day.setDate(first.getDate() + index);
-      var statusKey = statusAtTime(task, Math.min(day.getTime() + DAY_MS - 1, Date.now())).status;
-      var colDef = statusDef(statusKey);
+      var colDef = statusDef(statusOnDay(task, day.getTime()));
       row.appendChild(el("div", {class:"detail-day", style:"--row-fill:" + colDef.color + ";--row-ink:" + colDef.ink + ";", title:longDayLabel(day.getTime()) + ": " + colDef.label}, [
         el("span", {class:"detail-day-label"}, [shortWeekday(day.getTime()) + " " + pad(day.getDate()) + "/" + pad(day.getMonth() + 1)]),
         el("span", {class:"detail-day-bar", "aria-hidden":"true"}),
