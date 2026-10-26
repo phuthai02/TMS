@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản lý công việc</title>
+<link id="app-icon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%234f46e5%22%2F%3E%3Crect%20x%3D%2213%22%20y%3D%2214%22%20width%3D%2224%22%20height%3D%227%22%20rx%3D%223.5%22%20fill%3D%22%23fff%22%20opacity%3D%22.55%22%2F%3E%3Crect%20x%3D%2221%22%20y%3D%2226.5%22%20width%3D%2230%22%20height%3D%227%22%20rx%3D%223.5%22%20fill%3D%22%23fff%22%20opacity%3D%22.8%22%2F%3E%3Crect%20x%3D%2213%22%20y%3D%2239%22%20width%3D%2216%22%20height%3D%227%22%20rx%3D%223.5%22%20fill%3D%22%23fff%22%2F%3E%3Ccircle%20cx%3D%2243%22%20cy%3D%2244%22%20r%3D%229%22%20fill%3D%22%23fff%22%2F%3E%3Cpath%20d%3D%22M38.8%2044.2l2.9%202.9%205.4-5.8%22%20fill%3D%22none%22%20stroke%3D%22%234f46e5%22%20stroke-width%3D%222.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <meta name="color-scheme" content="light dark">
@@ -125,7 +126,8 @@
   header.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:12px;height:var(--topbar-h);padding:0 clamp(16px,2.4vw,28px);background:var(--surface);color:var(--text);border-bottom:1px solid var(--border);}
   header.topbar h1{margin:0;font-size:var(--fs-xl);font-weight:700;letter-spacing:-.02em;line-height:1.25;white-space:nowrap;}
   .brand-mark{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:var(--radius);background:var(--primary);color:var(--on-primary);}
-  .brand-mark svg{width:20px;height:20px;}
+  .brand-mark svg{width:100%;height:100%;}
+  .brand-mark .brand-check{stroke:var(--primary);}
   .brand-copy{display:flex;flex-direction:column;gap:2px;min-width:0;}
   .brand-copy span{font-size:var(--fs-xs);color:var(--text-muted);}
   .topbar-actions{display:flex;align-items:center;gap:8px;margin-left:auto;}
@@ -776,7 +778,7 @@
 
 <header class="topbar">
   <div class="brand-mark" aria-hidden="true">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <svg viewBox="0 0 64 64"><rect x="13" y="14" width="24" height="7" rx="3.5" fill="currentColor" opacity=".55"/><rect x="21" y="26.5" width="30" height="7" rx="3.5" fill="currentColor" opacity=".8"/><rect x="13" y="39" width="16" height="7" rx="3.5" fill="currentColor"/><circle cx="43" cy="44" r="9" fill="currentColor"/><path d="M38.8 44.2l2.9 2.9 5.4-5.8" fill="none" class="brand-check" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </div>
   <div class="brand-copy">
     <h1>Quản lý công việc</h1>
@@ -1100,10 +1102,18 @@
     if(mode === "light" || mode === "dark") return mode;
     return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
+  // icon trên tab trình duyệt: cùng hình với logo ở góc trên, đổi theo màu chủ đạo
+  function appIconHref(fill){
+    return "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="' + fill + '"/>' +
+      '<rect x="13" y="14" width="24" height="7" rx="3.5" fill="#fff" opacity=".55"/><rect x="21" y="26.5" width="30" height="7" rx="3.5" fill="#fff" opacity=".8"/>' +
+      '<rect x="13" y="39" width="16" height="7" rx="3.5" fill="#fff"/><circle cx="43" cy="44" r="9" fill="#fff"/>' +
+      '<path d="M38.8 44.2l2.9 2.9 5.4-5.8" fill="none" stroke="' + fill + '" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+  }
   function applySettings(){
     var root = document.documentElement;
     var settings = state.settings;
     var accent = ACCENTS[settings.accent];
+    document.getElementById("app-icon").setAttribute("href", appIconHref(accent.fill));
     root.style.setProperty("--accent-fill", accent.fill);
     root.style.setProperty("--accent-ink-l", accent.inkLight);
     root.style.setProperty("--accent-ink-d", accent.inkDark);
