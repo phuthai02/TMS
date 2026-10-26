@@ -276,12 +276,15 @@
   .gantt-legend{display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);font-size:var(--fs-xs);}
   .gantt-legend::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--legend-color);}
   .gantt-scroll{position:relative;overflow-x:auto;}
-  .gantt-grid{min-width:740px;}
-  .gantt-row{display:grid;grid-template-columns:var(--gantt-label,170px) repeat(14,minmax(0,1fr));align-items:center;min-height:48px;border-top:1px solid var(--border);}
+  .gantt-grid{min-width:calc(var(--gantt-label,170px) + var(--cols,14) * var(--col-min,40px));}
+  .gantt-grid.is-month{--col-min:44px;}
+  .gantt-row{display:grid;grid-template-columns:var(--gantt-label,170px) repeat(var(--cols,14),minmax(0,1fr));align-items:center;min-height:48px;border-top:1px solid var(--border);}
   .gantt-row.is-header{align-items:end;min-height:0;border-top:0;}
   .gantt-corner{align-self:stretch;display:flex;align-items:flex-end;padding:0 8px 8px;color:var(--text-muted);font-size:var(--fs-xs);font-weight:600;}
   .gantt-day{display:flex;flex-direction:column;align-items:center;min-height:52px;margin:0 2px 6px;padding:6px 0;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text);}
   .gantt-day:hover{background:var(--surface-2);}
+  .gantt-day.is-hour{cursor:default;}
+  .gantt-day.is-hour:not(.is-today):hover{background:transparent;}
   .gantt-day-wd{color:var(--text-muted);font-size:var(--fs-xs);}
   .gantt-day-num{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;}
   .day-month{font-size:.65em;font-weight:600;}
@@ -709,7 +712,7 @@
     .toolbar>.btn-primary{width:100%;}
     .day-strip{gap:4px;margin-top:-2px;}
     .order-palette{grid-template-columns:repeat(8,minmax(0,1fr));padding-left:0;}
-    .gantt-grid{--gantt-label:128px;min-width:calc(var(--gantt-label) + 14 * 44px);}
+    .gantt-grid{--gantt-label:128px;min-width:calc(var(--gantt-label) + var(--cols,14) * 44px);}
     .gantt-head h3{flex:1 1 100%;}
     .segmented button .icon{display:block;margin:0 auto 2px;}
     .text-long{display:none;}
@@ -859,6 +862,7 @@
     view: "report",
     settings: defaultSettings(),
     calendarDay: null,
+    calendarMode: "2week",
     workPeriod: "today",
     workAnchorDate: null,
     workFrom: null,
@@ -3276,89 +3280,152 @@
     items.forEach(function(item){ section.appendChild(item); });
     return section;
   }
+  var CALENDAR_MODES = [{key:"day", label:"Ngày", unit:"giờ", scope:"ngày này"}, {key:"week", label:"Tuần", unit:"ngày", scope:"tuần này"},
+    {key:"2week", label:"2 tuần", unit:"ngày", scope:"hai tuần này"}, {key:"month", label:"Tháng", unit:"ngày", scope:"tháng này"}];
+  // cột của dòng thời gian: xem Ngày thì mỗi cột một giờ, các chế độ khác mỗi cột một ngày
+  function calendarColumns(mode, selected){
+    var now = Date.now();
+    var columns = [];
+    if(mode === "day"){
+      for(var hour = 0; hour < 24; hour++){
+        var hourStart = new Date(selected);
+        hourStart.setHours(hour, 0, 0, 0);
+        var hourEnd = hourStart.getTime() + 3600000 - 1;
+        columns.push({start:hourStart.getTime(), end:hourEnd, hour:hour, tip:pad(hour) + "h", isNow:now >= hourStart.getTime() && now <= hourEnd});
+      }
+      return columns;
+    }
+    var first = mode === "month" ? startOfMonth(new Date(selected)) : startOfWeek(new Date(selected));
+    if(mode === "2week") first.setDate(first.getDate() - 7);
+    var count = mode === "month" ? new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate() : (mode === "week" ? 7 : 14);
+    var today = dayStartMs(new Date());
+    for(var offset = 0; offset < count; offset++){
+      var day = new Date(first);
+      day.setDate(first.getDate() + offset);
+      var next = new Date(day);
+      next.setDate(day.getDate() + 1);
+      columns.push({start:day.getTime(), end:next.getTime() - 1, tip:fmtDate(day).slice(0, 5), isNow:day.getTime() === today, isSelected:day.getTime() === selected});
+    }
+    return columns;
+  }
+  function shiftCalendar(selected, direction){
+    var mode = state.calendarMode;
+    var d = new Date(selected + DAY_MS / 2);
+    if(mode === "day") d.setDate(d.getDate() + direction);
+    else if(mode === "month"){
+      var dayOfMonth = d.getDate();
+      d.setDate(1);
+      d.setMonth(d.getMonth() + direction);
+      d.setDate(Math.min(dayOfMonth, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    }
+    else d.setDate(d.getDate() + direction * 7);
+    selectCalendarDay(d.getTime());
+  }
   function renderCalendarView(){
     var selected = calendarSelectedDay();
     var now = Date.now();
     var today = dayStartMs(new Date());
-    var windowStart = startOfWeek(new Date(selected));
-    windowStart.setDate(windowStart.getDate() - 7);
-    var startMs = windowStart.getTime();
-    var days = [];
-    for(var offset = 0; offset < 14; offset++){
-      var day = new Date(windowStart);
-      day.setDate(windowStart.getDate() + offset);
-      days.push(day.getTime());
+    var mode = state.calendarMode;
+    var modeDef = CALENDAR_MODES.filter(function(item){ return item.key === mode; })[0] || CALENDAR_MODES[2];
+    var columns = calendarColumns(mode, selected);
+    var lastIndex = columns.length - 1;
+    function columnIndexOf(time){
+      if(time < columns[0].start) return -1;
+      for(var i = 0; i < columns.length; i++) if(time <= columns[i].end) return i;
+      return columns.length;
     }
 
     var container = el("div", {class:"calendar-view"});
     container.appendChild(el("div", {class:"view-heading"}, [
       el("div", {}, [el("h2", {}, ["Lịch"]),
-        el("p", {}, ["Mỗi thanh chia đoạn theo trạng thái của việc trong từng ngày. Chọn một ngày để đọc nhật ký của ngày đó."])])
+        el("p", {}, ["Mỗi thanh chia đoạn theo trạng thái của việc trong từng " + modeDef.unit + ". Chọn một ngày để đọc nhật ký của ngày đó."])])
     ]));
+    var labelLong = mode === "day" ? longDayLabel(selected)
+      : mode === "month" ? "Tháng " + (new Date(selected).getMonth() + 1) + "/" + new Date(selected).getFullYear()
+      : fmtDate(columns[0].start) + " – " + fmtDate(columns[lastIndex].start);
+    var labelShort = mode === "day" ? shortWeekday(selected) + " " + fmtDate(selected)
+      : mode === "month" ? labelLong
+      : columns[0].tip + " – " + columns[lastIndex].tip;
     var calendarLabel = el("button", {
-      type:"button", class:"period-label", "aria-haspopup":"dialog", "aria-label":"Đang xem " + longDayLabel(selected) + ". Bấm để chọn ngày khác",
+      type:"button", class:"period-label", "aria-haspopup":"dialog", "data-control":"cal-label", "aria-label":"Đang xem " + longDayLabel(selected) + ". Bấm để chọn ngày khác",
       onclick:function(){ openDatePicker({anchor:calendarLabel, mode:"day", label:"Chọn ngày", value:new Date(selected), onPick:function(day){ selectCalendarDay(day.getTime()); }}); }
-    }, [icon("calendar"), el("span", {class:"period-label-text period-label-long"}, [fmtDate(days[0]) + " – " + fmtDate(days[13])]),
-      el("span", {class:"period-label-text period-label-short", "aria-hidden":"true"}, [fmtDate(days[0]).slice(0, 5) + " – " + fmtDate(days[13]).slice(0, 5)]), icon("chevronDown")]);
+    }, [icon("calendar"), el("span", {class:"period-label-text period-label-long"}, [labelLong]),
+      el("span", {class:"period-label-text period-label-short", "aria-hidden":"true"}, [labelShort]), icon("chevronDown")]);
+    var stepText = {day:"một ngày", week:"một tuần", "2week":"một tuần", month:"một tháng"}[mode];
+    var todayButton = el("button", {class:"btn btn-outline period-today", type:"button", "data-control":"cal-today", onclick:function(){ selectCalendarDay(today); }}, ["Hôm nay"]);
+    todayButton.disabled = selected === today;
+    var modeSegment = el("div", {class:"segmented period-segment", role:"group", "aria-label":"Chế độ xem lịch"});
+    CALENDAR_MODES.forEach(function(option){
+      modeSegment.appendChild(el("button", {
+        type:"button", "aria-pressed":String(option.key === mode), "data-control":"cal-mode-" + option.key,
+        onclick:function(){ state.calendarMode = option.key; render(); }
+      }, [option.label]));
+    });
     var toolbar = el("div", {class:"toolbar"}, [
-      el("button", {class:"period-arrow", type:"button", title:"Lùi một tuần", "aria-label":"Lùi một tuần", onclick:function(){ selectCalendarDay(selected - 7 * DAY_MS + DAY_MS / 2); }}, [icon("chevronLeft")]),
-      calendarLabel,
-      el("button", {class:"period-arrow", type:"button", title:"Tới một tuần", "aria-label":"Tới một tuần", onclick:function(){ selectCalendarDay(selected + 7 * DAY_MS + DAY_MS / 2); }}, [icon("chevronRight")]),
-      el("div", {class:"spacer"}),
-      el("button", {class:"btn btn-outline", type:"button", onclick:function(){ selectCalendarDay(today); }}, ["Hôm nay"])
+      el("div", {class:"period-nav"}, [
+        el("button", {class:"period-arrow", type:"button", "data-control":"cal-prev", title:"Lùi " + stepText, "aria-label":"Lùi " + stepText, onclick:function(){ shiftCalendar(selected, -1); }}, [icon("chevronLeft")]),
+        calendarLabel,
+        el("button", {class:"period-arrow", type:"button", "data-control":"cal-next", title:"Tới " + stepText, "aria-label":"Tới " + stepText, onclick:function(){ shiftCalendar(selected, 1); }}, [icon("chevronRight")]),
+        todayButton
+      ]),
+      modeSegment
     ]);
     container.appendChild(toolbar);
 
     var layout = el("div", {class:"calendar-layout"});
-    var ganttPanel = el("section", {class:"panel gantt-panel", "aria-label":"Dòng thời gian hai tuần"});
+    var ganttPanel = el("section", {class:"panel gantt-panel", "aria-label":"Dòng thời gian " + modeDef.scope});
     var ganttHead = el("div", {class:"gantt-head"}, [el("h3", {}, ["Dòng thời gian"])]);
     ganttPanel.appendChild(ganttHead);
-    var grid = el("div", {class:"gantt-grid"});
+    var grid = el("div", {class:"gantt-grid" + (mode === "month" ? " is-month" : ""), style:"--cols:" + columns.length + ";"});
     var header = el("div", {class:"gantt-row is-header"}, [el("span", {class:"gantt-corner"}, ["Công việc"])]);
-    days.forEach(function(dayMs){
-      var isToday = dayMs === today;
-      header.appendChild(el("button", {
-        type:"button", class:"gantt-day" + (isToday ? " is-today" : ""), "aria-pressed":String(dayMs === selected),
-        "aria-label":longDayLabel(dayMs) + (isToday ? ", hôm nay" : ""), onclick:function(){ selectCalendarDay(dayMs); }
+    var headerCells = columns.map(function(column){
+      if(mode === "day") return el("span", {class:"gantt-day is-hour" + (column.isNow ? " is-today" : "")}, [
+        el("span", {class:"gantt-day-wd"}, [column.isNow ? "Nay" : "\u00a0"]),
+        el("span", {class:"gantt-day-num"}, [String(column.hour), el("span", {class:"day-month"}, ["h"])])
+      ]);
+      var dayMs = column.start;
+      return el("button", {
+        type:"button", class:"gantt-day" + (column.isNow ? " is-today" : ""), "aria-pressed":String(column.isSelected),
+        "aria-label":longDayLabel(dayMs) + (column.isNow ? ", hôm nay" : ""), onclick:function(){ selectCalendarDay(dayMs); }
       }, [
-        el("span", {class:"gantt-day-wd"}, [isToday ? "Nay" : shortWeekday(dayMs)]),
+        el("span", {class:"gantt-day-wd"}, [column.isNow ? "Nay" : shortWeekday(dayMs)]),
         el("span", {class:"gantt-day-num"}, [String(new Date(dayMs).getDate()), el("span", {class:"day-month"}, ["/" + pad(new Date(dayMs).getMonth() + 1)])])
-      ]));
+      ]);
     });
+    headerCells.forEach(function(cell){ header.appendChild(cell); });
     grid.appendChild(header);
     // thanh bắt đầu từ ngày tạo như dải "Theo ngày" trong chi tiết; chỉ hiện việc đã từng bắt đầu làm
     var rows = state.tasks.map(function(task){
       var span = workSpan(task);
       var history = sortedHistory(task);
       if(span.start === null || !history.length) return null;
-      return {task:task, span:span, first:Math.min(new Date(history[0].at).getTime(), span.start)};
+      var first = Math.min(new Date(history[0].at).getTime(), span.start);
+      var endMs = span.end !== null ? span.end : now;
+      return {task:task, span:span, first:first, endMs:endMs, startIndex:columnIndexOf(first), endIndex:columnIndexOf(endMs)};
     }).filter(function(entry){
-      if(!entry) return false;
-      var endIndex = dayDiff(startMs, entry.span.end !== null ? entry.span.end : now);
-      return endIndex >= 0 && dayDiff(startMs, entry.first) <= 13;
+      return entry && entry.endIndex >= 0 && entry.startIndex <= lastIndex;
     }).sort(function(a, b){ return a.first - b.first; });
     var shownStatuses = {};
     rows.forEach(function(entry){
       var task = entry.task;
       var span = entry.span;
-      var endMs = span.end !== null ? span.end : now;
-      var startIndex = dayDiff(startMs, entry.first);
-      var endIndex = dayDiff(startMs, endMs);
+      var startIndex = entry.startIndex;
+      var endIndex = entry.endIndex;
       var colDef = statusDef(task.status);
-      var total = dayDiff(entry.first, endMs) + 1;
+      var total = dayDiff(entry.first, entry.endMs) + 1;
       var rangeText = fmtDate(entry.first).slice(0, 5) + " → " + (span.end !== null ? fmtDate(span.end).slice(0, 5) : "nay");
       var row = el("div", {class:"gantt-row", style:"--row-fill:" + colDef.color + ";--row-ink:" + colDef.ink + ";"});
       row.appendChild(el("button", {type:"button", class:"gantt-label", title:task.title + " · " + rangeText + " · " + total + " ngày", onclick:function(){ openTaskDetail(task.id); }}, [
         el("span", {class:"gantt-label-title"}, [task.title]),
         el("span", {class:"gantt-label-status"}, [colDef.label])
       ]));
-      days.forEach(function(dayMs, index){
-        row.appendChild(el("span", {class:"gantt-cell" + (dayMs === selected ? " is-selected" : (dayMs === today ? " is-today" : "")), "aria-hidden":"true", style:"grid-column:" + (index + 2) + ";"}));
+      columns.forEach(function(column, index){
+        row.appendChild(el("span", {class:"gantt-cell" + (column.isSelected ? " is-selected" : (column.isNow ? " is-today" : "")), "aria-hidden":"true", style:"grid-column:" + (index + 2) + ";"}));
       });
-      // gộp các ngày liền nhau cùng trạng thái thành một đoạn
+      // mỗi cột lấy trạng thái lúc cuối cột (cột đang diễn ra thì lấy lúc này); gộp các cột liền nhau cùng trạng thái
       var runs = [];
-      for(var index = Math.max(0, startIndex); index <= Math.min(13, endIndex); index++){
-        var statusKey = statusOnDay(task, days[index]);
+      for(var index = Math.max(0, startIndex); index <= Math.min(lastIndex, endIndex); index++){
+        var statusKey = statusAtTime(task, Math.min(columns[index].end, now)).status;
         var last = runs[runs.length - 1];
         if(last && last.status === statusKey) last.to = index;
         else runs.push({status:statusKey, from:index, to:index});
@@ -3369,9 +3436,9 @@
         shownStatuses[def.key] = true;
         row.appendChild(el("span", {
           class:"gantt-bar" + (runIndex > 0 ? " join-start" : (startIndex < 0 ? " cut-start" : "")) +
-            (runIndex < runs.length - 1 ? " join-end" : (endIndex > 13 ? " cut-end" : "")),
+            (runIndex < runs.length - 1 ? " join-end" : (endIndex > lastIndex ? " cut-end" : "")),
           style:"grid-column:" + (run.from + 2) + " / " + (run.to + 3) + ";--row-fill:" + def.color + ";--row-ink:" + def.ink + ";",
-          title:task.title + " · " + def.label + ": " + fmtDate(days[run.from]).slice(0, 5) + (length > 1 ? " → " + fmtDate(days[run.to]).slice(0, 5) : "") + " · " + length + " ngày"
+          title:task.title + " · " + def.label + ": " + columns[run.from].tip + (length > 1 ? " → " + columns[run.to].tip : "") + " · " + length + " " + modeDef.unit
         }));
       });
       grid.appendChild(row);
@@ -3380,9 +3447,9 @@
       if(shownStatuses[def.key]) ganttHead.appendChild(el("span", {class:"gantt-legend", style:"--legend-color:" + def.color + ";"}, [def.label]));
     });
     var scroll = el("div", {class:"gantt-scroll drag-scroll"}, [grid]);
-    ganttPanel.appendChild(el("span", {class:"table-scroll-hint"}, ["Kéo ngang để xem đủ hai tuần →"]));
+    ganttPanel.appendChild(el("span", {class:"table-scroll-hint"}, ["Kéo ngang để xem đủ " + {day:"24 giờ", week:"cả tuần", "2week":"hai tuần", month:"cả tháng"}[mode] + " →"]));
     ganttPanel.appendChild(scroll);
-    if(!rows.length) ganttPanel.appendChild(el("div", {class:"empty-hint"}, ["Chưa có việc nào được làm trong hai tuần này."]));
+    if(!rows.length) ganttPanel.appendChild(el("div", {class:"empty-hint"}, ["Chưa có việc nào được làm trong " + modeDef.scope + "."]));
     layout.appendChild(ganttPanel);
 
     var dayEnd = selected + DAY_MS - 1;
@@ -3438,9 +3505,11 @@
     layout.appendChild(agenda);
     container.appendChild(layout);
     app.appendChild(container);
-    // màn hình hẹp: đưa ngày đang chọn vào giữa khung dòng thời gian
-    var selectedDay = header.querySelector('[aria-pressed="true"]');
-    if(selectedDay && scroll.scrollWidth > scroll.clientWidth) scroll.scrollLeft = Math.max(0, selectedDay.offsetLeft - scroll.clientWidth / 2);
+    // khung hẹp: đưa ngày đang chọn (xem Ngày: giờ hiện tại, hoặc giờ bắt đầu sớm nhất, mặc định 8h) vào giữa dòng thời gian
+    var focusIndex = columns.findIndex(function(column){ return mode === "day" ? column.isNow : column.isSelected; });
+    if(focusIndex < 0 && mode === "day") focusIndex = rows.length ? Math.max(0, Math.min.apply(null, rows.map(function(entry){ return entry.startIndex; }))) : 8;
+    var focusCell = headerCells[focusIndex];
+    if(focusCell && scroll.scrollWidth > scroll.clientWidth) scroll.scrollLeft = Math.max(0, focusCell.offsetLeft - scroll.clientWidth / 2);
   }
   // dải "Theo ngày" trong chi tiết: trạng thái cuối mỗi ngày, từ ngày tạo tới ngày kết thúc (hoặc hôm nay)
   function buildDetailDays(task){
